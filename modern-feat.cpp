@@ -48,6 +48,7 @@ void test15_variadic_template()
 namespace jj48
 {
 //-----------
+// 本质上和typedef是一样的
 // 这个看起来很怪，但其实是一个函数名的alias
 // 在C++1.0时写作：
 // typedef void (*func)(int, int);
@@ -55,7 +56,8 @@ namespace jj48
 // 下面这样写就比较清楚了
 using func = void (*) (int,int);
 
-// 使用时只要赋给一个函数名称即可，本质是一个指针
+// 使用时只要赋给一个函数名称即可，本质是一个函数指针
+// 下面创建了对象
 void example(int, int) {}
 func fn = example;
 
@@ -73,22 +75,27 @@ mystring<char> str;
 // typedef相当于是c++1.0的实现方法，using更高级了
 
 //-----------
-// 没get到这个的意思？？
+// 模板类里也可以用这个
 // type alias can introduce a member typedef name
 template<typename T>
+// 把struct当做class来看
 struct Container {
-    using value_type = T;
+    // 相当于这个类里有一个成员叫做value_type
+    using value_type = T; // same as typedef T value_type;
 };
-// 同没理解？？
 // which can be used in generic programming
 template<typename Container>
 void fn2(const Container& c)
 {
     // 强行告诉C++下面这个是类型，不是变量
     // 这样不用等到实例化再来确定是啥类型
-    // TODO: 这里没理解为啥又多了一个n？
-    typename Container::value_type n;
-    cout << "value type " << n << endl;
+    // 可能是创建了一个n的对象，把typename去掉来看，单纯认为是表明后者是类型
+    // typename Container::value_type n; // 原版
+
+    // 下面是我自己写的，会用到隐式类型转换
+    // TODO: 这里对于实际的用处不理解？猜测可以用创建的对象去执行后续操作
+    typename Container::value_type n = 1; // n = 1.5
+    cout << "value is " << n << endl;
 }
 
 //-----------
