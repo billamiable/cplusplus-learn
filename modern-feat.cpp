@@ -3,7 +3,10 @@
 // Incorporate my own implementation and thoughts
 
 #include <iostream>
+#include <vector>
+#include <string>
 #include <bitset>
+#include <memory>
 using namespace std;
 
 //----------------------------------------------------
@@ -43,11 +46,10 @@ void test15_variadic_template()
 //----------------------------------------------------
 // Type Alias
 //----------------------------------------------------
-
-// http://en.cppreference.com/w/cpp/language/type_alias
 namespace jj48
 {
 //-----------
+// http://en.cppreference.com/w/cpp/language/type_alias
 // 本质上和typedef是一样的
 // 这个看起来很怪，但其实是一个函数名的alias
 // 在C++1.0时写作：
@@ -108,6 +110,130 @@ void test48_type_alias()
 }
 }
 
+//----------------------------------------------------
+// Move Semantics with Noexcept
+//----------------------------------------------------
+namespace jj301
+{
+// http://www.ibm.com/developerworks/cn/aix/library/1307_lisl_c11/
+// http://stackoverflow.com/questions/8001823/how-to-enforce-move-semantics-when-a-vector-grows
+
+// 可以理解成给别人打保票，所以别人才会用
+// You need to inform C++ (specifically std::vector) that your move constructor and destructor does not throw.
+// Then the move constructor will be called when the vector grows.
+// If the constructor is not noexcept, std::vector can't use it,
+// since then it can't ensure the exception guarantees demanded by the standard.
+
+// 注意，growable conatiners (會發生 memory reallocation) 只有 vector 和 deque.
+
+// 以下的 MyString 和 jj30 中的唯一差異是 noexcept for move functions. 結果十分良好.
+
+class MyString {
+private:
+    char* _data;
+    size_t _len;
+    void _init_data(const char *s) {
+        _data = new char[_len+1];
+        memcpy(_data, s, _len);
+        _data[_len] = '\0';
+    }
+public:
+    // default ctor
+    MyString() : _data(NULL), _len(0) { }
+
+    // ctor
+    MyString(const char* p) : _len(strlen(p)) {
+        _init_data(p);
+    }
+
+    // copy ctor
+    MyString(const MyString& str) : _len(str._len) {
+        // TODO: 这个print的是啥？
+        cout << "Copy Constructor is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
+        _init_data(str._data); 	//COPY
+    }
+
+    // move ctor, with "noexcept"
+    MyString(MyString&& str) noexcept : _data(str._data), _len(str._len) {
+        cout << "Move Constructor is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
+        // TODO: 这里数据都没赋值啊？
+        str._len = 0;
+        str._data = NULL; //避免 delete (in dtor)
+    }
+
+    // copy assignment
+    MyString& operator=(const MyString& str) {
+        cout << "Copy Assignment is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
+        // 判断是否是给自己拷贝赋值
+        // TODO: 具体写法再学习下
+        if (this != &str) {
+            // 如果原来有数据要删掉
+            if (_data) delete _data;
+            _len = str._len;
+            _init_data(str._data); //COPY!
+        }
+        else {
+            cout << "Self Assignment, Nothing to do." << endl;
+        }
+        return *this;
+    }
+
+    // move assignment
+    // TODO: 理解具体的用法
+    MyString& operator=(MyString&& str) noexcept { //注意 noexcept
+        cout << "Move Assignment is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
+        if (this != &str) {
+            if (_data) delete _data;
+            _len = str._len;
+            _data = str._data; //MOVE!
+            str._len = 0;
+            str._data = NULL; //避免 delete (in dtor)
+        }
+        return *this;
+    }
+
+    // dtor
+    // 文檔說需 noexcept 但本處無. destructor is noexcept by default.
+    virtual ~MyString() {
+        cout << "Destructor is called! " << "source: ";
+        if (_data) cout << _data;
+        cout << " [" << (void*)(_data) << ']' << endl;
+
+        if (_data) {
+            delete _data;
+        }
+    }
+};
+
+void test301_move_semantics_with_noexcept()
+{
+    cout << "\ntest301_move_semantics_with_noexcept_and_swap().......\n";
+
+    vector<MyString> vec;
+    // without reserve(N); // ?
+
+    // TODO: 这里的逻辑还有待研究
+    // Move Constructor is called! source: jjhou
+    vec.push_back(MyString("jjhou"));
+    // Destructor is called! [0]
+
+    //Move Constructor is called! source: sabrina
+    vec.push_back(MyString("sabrina"));
+
+    vec.push_back(MyString("stacy"));
+
+    // 以上十分好：
+    // TODO: 第1条没咋看懂
+	//  1, 以 temp obj.放入容器，編譯器知道那是個 Rvalue, 於是呼叫 move ctor 而非 copy ctor.
+	//  2, 當 push_back() 引發 vector 擴展，擴展過程中使用 move 而非 copy.
+    cout << "vec.clear() ------- \n";
+    vec.clear();
+
+    // exit 前會 delete all existing objects.
+}
+
+
+}
 
 //---------------------------------------------------
 int main(int argc, char** argv) 
@@ -117,5 +243,7 @@ int main(int argc, char** argv)
     jj15::test15_variadic_template();
 
     jj48::test48_type_alias();
+
+    jj301::test301_move_semantics_with_noexcept();
 
 }
