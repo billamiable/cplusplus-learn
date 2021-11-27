@@ -148,17 +148,18 @@ public:
 
     // copy ctor
     MyString(const MyString& str) : _len(str._len) {
-        // TODO: 这个print的是啥？
+        // print的内容是内存位置？
         cout << "Copy Constructor is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
-        _init_data(str._data); 	//COPY
+        _init_data(str._data); 	//COPY!
     }
 
     // move ctor, with "noexcept"
     MyString(MyString&& str) noexcept : _data(str._data), _len(str._len) {
         cout << "Move Constructor is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
-        // TODO: 这里数据都没赋值啊？
+        // 这里的数据复制在上面一行里了，下面只是防止两个指针指向同一个位置，需要删除
+        // TODO: move的核心逻辑有待学习
         str._len = 0;
-        str._data = NULL; //避免 delete (in dtor)
+        str._data = NULL; // 避免 delete (in dtor)？
     }
 
     // copy assignment
@@ -166,6 +167,7 @@ public:
         cout << "Copy Assignment is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
         // 判断是否是给自己拷贝赋值
         // TODO: 具体写法再学习下
+        // this表示指向类的指针，那为啥输入数据的地址会相等呢？
         if (this != &str) {
             // 如果原来有数据要删掉
             if (_data) delete _data;
@@ -180,11 +182,13 @@ public:
 
     // move assignment
     // TODO: 理解具体的用法
-    MyString& operator=(MyString&& str) noexcept { //注意 noexcept
+    MyString& operator=(MyString&& str) noexcept { // 注意 noexcept
         cout << "Move Assignment is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
         if (this != &str) {
             if (_data) delete _data;
             _len = str._len;
+            // 明显这里就不是调用init_data函数来创建的
+            // 看起来是一个浅拷贝，没有new新的空间，那感觉还是不懂啊？
             _data = str._data; //MOVE!
             str._len = 0;
             str._data = NULL; //避免 delete (in dtor)
