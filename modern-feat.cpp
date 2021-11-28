@@ -14,9 +14,13 @@ using namespace std;
 //----------------------------------------------------
 namespace jj15
 {
+// 这里的内容包含了最开始和专门针对variadic template来讲的两块内容
 
 //~~~~~~~~~~~~~~~
-//case4
+// case4
+// recursive function calling.
+namespace case4
+{
 // 这个是作为stopping criterion，非常重要！
 // 用来在recursive call的最后一轮用的
 void printX()
@@ -26,8 +30,107 @@ void printX()
 template <typename T, typename... Types>
 void printX(const T& firstArg, const Types&... args)
 {
+    // 实际使用的时候需要保证可以cout
     cout << firstArg << endl; // print first argument
     printX(args...);          // recursive call for remaining arguments
+}
+
+}
+
+//~~~~~~~~~~~~~~~
+// case3
+// 用variadic template重写printf
+namespace case3
+{
+// http://stackoverflow.com/questions/3634379/variadic-templates
+// 最后一个和一堆都没了，就只剩最开始的字符串
+void printf(const char *s)
+{
+    // 这个是stopping criterion
+    // 模拟c的print方法，发现数量不匹配，输出错误
+    while (*s)
+    {
+        if (*s == '%' && *(++s) != '%')
+            throw std::runtime_error("invalid format string: missing arguments");
+        std::cout << *s++ << "~end~"; // 打印空格和换行符
+    }
+    std::cout << std::endl;
+}
+
+template<typename T, typename... Args>
+void printf(const char* s, T value, Args... args)
+{
+    while (*s)
+    {
+        if (*s == '%' && *(++s) != '%')
+        {
+            std::cout << value;
+            // 用++s的原因是后面有个空格需要跳过
+            printf(++s, args...);
+            return;
+        }
+        // TODO: 打印空格，这就是递归的后手，我常常不能理解的
+        std::cout << *s++;
+    }
+    throw std::logic_error("extra arguments provided to printf");
+}
+
+}
+
+
+//~~~~~~~~~~~~~~~
+// case1
+// 检测数据里最大的（initializer_list实现）
+namespace case1
+{
+// ...\4.9.2\include\c++\bits\predefined_oops.h
+// 最终比大小用到的仿函数
+struct _Iter_less_iter
+{
+    // 本质是一个仿函数，做一个比较
+    template<typename _Iterator1, typename _Iterator2>
+        bool
+        operator()(_Iterator1 __it1, _Iterator2 __it2) const
+        { return *__it1 < *__it2; }
+};
+
+// 生成仿函数的对象，用在下下个代码块里
+inline _Iter_less_iter
+__iter_less_iter()
+{ return _Iter_less_iter(); }
+
+// 具体的实现，如何与所有的值做比较，存下来最大的那个
+// ...\4.9.2\include\c++\bits\stl_algo.h
+template<typename _ForwardIterator, typename _Compare>
+    _ForwardIterator
+    __max_element(_ForwardIterator __first, _ForwardIterator __last,
+                  _Compare __comp)
+    {
+        if (__first == __last) return __first;
+        _ForwardIterator __result = __first;
+        // 很经典的比大小存下来最大的
+        while (++__first != __last) {
+            if (__comp(__result, __first))
+                __result = __first;
+        }
+        return __result;
+    }
+
+// initializer_list的max函数的第一层调用实现
+template<typename _ForwardIterator>
+    inline _ForwardIterator
+    max_element(_ForwardIterator __first, _ForwardIterator __last)
+    {
+        return __max_element(__first, __last,
+                             __iter_less_iter());
+    }
+
+// 在输入数据阶段{}会自动生成initializer_list，然后调用里面的max函数
+template<typename _Tp>
+    inline _Tp
+    max(initializer_list<_Tp> __l)
+    { return *max_element(__l.begin(), __l.end()); }
+
 }
 
 //-----------
@@ -37,9 +140,19 @@ void test15_variadic_template()
     cout << "test15_variadic_template().......... ";
     cout << "\n----------------------------------------------------------\n";
 
-    //case4
-    printX(7.5, "hello", bitset<16>(377), 42);
+    // case4
+    cout << "\n.....case4..........\n";
+    case4::printX(7.5, "hello", bitset<16>(377), 42);
 
+    //case3
+    cout << "\n.....case3..........\n";
+	int* pi = new int; // 只是为了打印多样性
+    // 15 This is Ace. 0x7fb5aa403430 3.14159
+	case3::printf("%d %s %p %f \n", 15, "This is Ace.", pi, 3.141592653);
+
+    // case1
+    cout << "\n.....case1..........\n";
+    cout << case1::max( { 57, 48, 60, 100, 20, 18} ) << endl; //100
 
 }
 }
