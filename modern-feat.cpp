@@ -33,7 +33,9 @@ void printX(const T& firstArg, const Types&... args)
 //-----------
 void test15_variadic_template()
 {
-    cout << "\ntest15_variadic_template().......... \n";
+    cout << "\n----------------------------------------------------------\n";
+    cout << "test15_variadic_template().......... ";
+    cout << "\n----------------------------------------------------------\n";
 
     //case4
     printX(7.5, "hello", bitset<16>(377), 42);
@@ -103,7 +105,9 @@ void fn2(const Container& c)
 //-----------
 void test48_type_alias()
 {
-    cout << "\ntest48_type_alias().......\n";
+    cout << "\n----------------------------------------------------------\n";
+    cout << "test48_type_alias().......";
+    cout << "\n----------------------------------------------------------\n";
 
     Container<int> c;
     fn2(c); // Container::value_type will be int in this function
@@ -211,7 +215,9 @@ public:
 
 void test301_move_semantics_with_noexcept()
 {
-    cout << "\ntest301_move_semantics_with_noexcept_and_swap().......\n";
+    cout << "\n----------------------------------------------------------\n";
+    cout << "test301_move_semantics_with_noexcept_and_swap().......";
+    cout << "\n----------------------------------------------------------\n";
 
     vector<MyString> vec;
     // without reserve(N); // ?
@@ -239,6 +245,104 @@ void test301_move_semantics_with_noexcept()
 
 }
 
+//----------------------------------------------------
+// Lambda
+//----------------------------------------------------
+namespace jj06
+{
+// TODO: function是啥？
+// 其实可以用另一个写法来实现一样的功能
+function<int(int, int)> returnLambda ()
+{
+    return [] (int x, int y) {
+        return x*y;
+    };
+}
+
+void test06_lambda()
+{
+    cout << "\n----------------------------------------------------------\n";
+    cout << "test06_lambda()..................";
+    cout << "\n----------------------------------------------------------\n";
+
+    auto lf = returnLambda();
+    // lf()创建了lambda的对象
+    cout << lf(9,8) << endl;  //72
+
+    // TODO: 这里没看明白在干啥？？
+    // //[Error] no matching function for call to 'std::function<int(int, int)>::function(int, int)'
+    // ! decltype(lf)(3,5);
+
+    // no-op. 喚起的是 std::function 的 default ctor.
+    // 這不是我要測的. 所以稍後又測一個 -- 那果然就編譯報錯了
+    decltype(lf)();
+
+    // lambda可以创建静态/非静态对象，也可以返回值（需要按照语法规则，编译器具有一定识别能力）
+    [] {
+        cout << "hello lambda" << endl;
+        static int x = 5;
+        int y = 6;
+        return x;
+    } (); // 这里()直接创建对象，就print了，一般很少这样写
+
+    {
+        int id = 0;
+        // id是外部变量，取值
+        // 若無 mutable ==> [Error] increment of read-only variable 'id'
+        // id 變化不影響 outer scope (除非傳入的是 reference)
+        auto f = [id] () mutable {
+            cout << "id: " << id << endl;
+            ++id;
+        };
+        // 这个实验挺有趣
+        id = 42;
+        f(); //id: 0
+        f(); //id: 1
+        f(); //id: 2
+        cout << id << endl; // 42，没改合理
+
+        // TODO: 我是想創建一個 lambda 的 temp obj (then invoke it's default ctor,
+        // but you know that lambda have no ctor or assignment operator.
+        // [Error] no matching function for call to 'jj06::test06_lambda()::<lambda()>::__lambda9(int, int)'
+        //! decltype(f)(3,5);
+
+        // [Error] use of deleted function 'jj06::test06_lambda()::<lambda()>::<lambda>()'
+        //! decltype(f)();
+    }
+
+    {
+        int id = 0;
+        // id是外部变量，取reference
+        auto f = [&id] (int param) {
+            cout << "id: " << id << endl;
+            ++id; // 沒有 mutable 也能 ++
+            ++param; // 和 mutable 無關
+        };
+        id = 42;
+        f(7); //id: 42，因为reference不会创建新的，f()在id=42后面，所以已经变了
+        f(7); //id: 43
+        f(7); //id: 44
+        cout << id << endl; // 45，改了合理
+    }
+
+    // 给一个条件，大于30小于100拿掉
+    vector<int> vi {5,28,50,83,70,590,245,59,24};
+    int x = 30;
+    int y = 100;
+    vi.erase(remove_if(vi.begin(),
+                       vi.end(),
+                       [x, y](int n) { return x<n && n<y; }
+                       ),
+             vi.end()
+            );
+    for (auto i : vi)
+        cout << i << ' '; //5 28 590 245 24
+    cout << endl;
+
+}
+}
+
+
 //---------------------------------------------------
 int main(int argc, char** argv) 
 {
@@ -250,4 +354,5 @@ int main(int argc, char** argv)
 
     jj301::test301_move_semantics_with_noexcept();
 
+    jj06::test06_lambda();
 }
