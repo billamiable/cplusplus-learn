@@ -77,7 +77,6 @@ void printf(const char* s, T value, Args... args)
 
 }
 
-
 //~~~~~~~~~~~~~~~
 // case1
 // 检测数据里最大的（initializer_list实现）
@@ -133,6 +132,46 @@ template<typename _Tp>
 
 }
 
+//~~~~~~~~~~~~~~~
+// case2
+// 检测数据里最大的（直接variadic template recursive实现）
+namespace case2
+{
+// http://stackoverflow.com/questions/3634379/variadic-templates
+int maximum(int n)
+{
+    return n;
+}
+
+template<typename... Args>
+int maximum(int n, Args... args)
+{
+    return std::max(n, maximum(args...));
+}
+}
+
+//~~~~~~~~~~~~~~~
+// case5
+// 以非一般的方式处理第一个和最后一个元素
+// refer to test07_tuples()
+
+
+//~~~~~~~~~~~~~~~
+// case6
+// recursive inheritance
+namespace case6
+{
+
+}
+
+//~~~~~~~~~~~~~~~
+// case7
+// recursive composition
+namespace case7
+{
+
+}
+
 //-----------
 void test15_variadic_template()
 {
@@ -154,6 +193,9 @@ void test15_variadic_template()
     cout << "\n.....case1..........\n";
     cout << case1::max( { 57, 48, 60, 100, 20, 18} ) << endl; //100
 
+    // case2
+    cout << "\n.....case2..........\n";
+	cout << case2::maximum(57, 48, 60, 100, 20, 18) << endl; // 100
 }
 }
 
