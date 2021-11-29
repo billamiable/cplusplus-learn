@@ -7,6 +7,7 @@
 #include <string>
 #include <bitset>
 #include <memory>
+#include <complex>
 using namespace std;
 
 //----------------------------------------------------
@@ -269,6 +270,7 @@ void test48_type_alias()
 }
 }
 
+
 //----------------------------------------------------
 // Move Semantics with Noexcept
 //----------------------------------------------------
@@ -400,6 +402,7 @@ void test301_move_semantics_with_noexcept()
 
 }
 
+
 //----------------------------------------------------
 // Lambda
 //----------------------------------------------------
@@ -498,6 +501,55 @@ void test06_lambda()
 }
 
 
+//----------------------------------------------------
+// Rvalue Move
+//----------------------------------------------------
+namespace jj12
+{
+void test12_Rvalue_Move()
+{
+    cout << "\n----------------------------------------------------------\n";
+    cout << "test12_Rvalue_Move()..........";
+    cout << "\n----------------------------------------------------------\n";
+
+    string s1("aaaa");
+    string s2("bbbb");
+    string s = s1 + s2;
+
+    cout << "s: "  << s  << endl; // aaaabbbb
+    cout << "s1: " << s1 << endl; // aaaa
+    cout << "s2: " << s2 << endl; // bbbb
+
+    // TODO: 这是为啥？？而且只有s1没了？？
+    s = move(s1) + move(s2);
+    cout << "s: "  << s  << endl; // aaaabbbb
+    cout << "s1: " << s1 << endl; //
+    cout << "s2: " << s2 << endl; // bbbb
+
+    //----------------
+
+    int x = 4;
+    int y = 8;
+    //! x + y = 10; // [Error] lvalue required as left operand of assignment
+
+    //----------------
+
+    s1 = "Hello ";
+    // 这里也没理解是啥逻辑？
+    s1 + s2 = s2; // 竟然可以通過編譯，作者自己违反了规则
+    cout << "s1: " << s1 << endl;	// s1: Hello
+    cout << "s2: " << s2 << endl;	// s2: bbbb
+    string() = "World"; // 對 temp obj 賦值可以，作者自己违反了规则
+
+    complex<int> c1(2,3), c2(4,5);
+    c1 + c2 = complex<int>(6,9); // 感觉没用？？
+    cout << "c1: " << c1 << endl;	// c1: (2,3)
+    cout << "c2: " << c2 << endl;	// c2: (4,5)
+    complex<int>() = complex<int>(6,9);	// 對 temp obj 賦值可以，作者自己违反了规则
+}
+
+}
+
 //---------------------------------------------------
 int main(int argc, char** argv) 
 {
@@ -510,4 +562,6 @@ int main(int argc, char** argv)
     jj301::test301_move_semantics_with_noexcept();
 
     jj06::test06_lambda();
+
+    jj12::test12_Rvalue_Move();
 }
