@@ -315,12 +315,13 @@ public:
     }
 
     // move ctor, with "noexcept"
+    // 这里两个指针指向同一个地址，后面一定要把其中一个打断
     MyString(MyString&& str) noexcept : _data(str._data), _len(str._len) {
         cout << "Move Constructor is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
         // 这里的数据复制在上面一行里了，下面只是防止两个指针指向同一个位置，需要删除
-        // TODO: move的核心逻辑有待学习
         str._len = 0;
-        str._data = NULL; // 避免 delete (in dtor)？
+        // 这一行特别重要，如果没有的话，临时对象析构的时候会自动把数据删掉
+        str._data = NULL; // 避免 delete (in dtor)
     }
 
     // copy assignment
@@ -333,7 +334,7 @@ public:
             // 如果原来有数据要删掉
             if (_data) delete _data;
             _len = str._len;
-            _init_data(str._data); //COPY!
+            _init_data(str._data); // COPY!
         }
         else {
             cout << "Self Assignment, Nothing to do." << endl;
@@ -342,17 +343,16 @@ public:
     }
 
     // move assignment
-    // TODO: 理解具体的用法
     MyString& operator=(MyString&& str) noexcept { // 注意 noexcept
         cout << "Move Assignment is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
         if (this != &str) {
             if (_data) delete _data;
             _len = str._len;
-            // 明显这里就不是调用init_data函数来创建的
-            // 看起来是一个浅拷贝，没有new新的空间，那感觉还是不懂啊？
-            _data = str._data; //MOVE!
+            // 一个浅拷贝，没有new新的空间，相当于偷过来了
+            _data = str._data; // MOVE!
             str._len = 0;
-            str._data = NULL; //避免 delete (in dtor)
+            // 跟上面的逻辑一样，非常重要
+            str._data = NULL; // 避免 delete (in dtor)
         }
         return *this;
     }
@@ -364,6 +364,8 @@ public:
         if (_data) cout << _data;
         cout << " [" << (void*)(_data) << ']' << endl;
 
+        // 只要当指针不是NULL的时候才delete，做一个doublecheck
+        // 与上面的设计配套，保证没问题
         if (_data) {
             delete _data;
         }
