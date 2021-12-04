@@ -328,8 +328,8 @@ public:
     MyString& operator=(const MyString& str) {
         cout << "Copy Assignment is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
         // 判断是否是给自己拷贝赋值
-        // TODO: 具体写法再学习下
-        // this表示指向类的指针，那为啥输入数据的地址会相等呢？
+        // this定义，谁调用它，this就指向谁，因此这里this指向类的对象（被赋值的）
+        // 因此&str同样是取类的对象的地址，可以用来判断是不是自己拷贝给自己
         if (this != &str) {
             // 如果原来有数据要删掉
             if (_data) delete _data;
