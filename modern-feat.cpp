@@ -4,10 +4,13 @@
 
 #include <iostream>
 #include <vector>
+#include <list>
+#include <deque>
 #include <string>
 #include <bitset>
 #include <memory>
 #include <complex>
+#include <ctime>
 using namespace std;
 
 //----------------------------------------------------
@@ -296,7 +299,7 @@ private:
     void _init_data(const char *s) {
         _data = new char[_len+1];
         memcpy(_data, s, _len);
-        _data[_len] = '\0';
+        _data[_len] = '\0'; // 最后都以这个结尾
     }
 public:
     // default ctor
@@ -311,10 +314,12 @@ public:
     MyString(const MyString& str) : _len(str._len) {
         // print的内容是内存位置？
         cout << "Copy Constructor is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
-        _init_data(str._data); 	//COPY!
+        _init_data(str._data); 	// COPY!
     }
 
     // move ctor, with "noexcept"
+    // 注意参数类型，是两个&，代表右值引用符号
+    // TODO：加了exception有什么好处？除了exception还要关注别的吗？
     // 这里两个指针指向同一个地址，后面一定要把其中一个打断
     MyString(MyString&& str) noexcept : _data(str._data), _len(str._len) {
         cout << "Move Constructor is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
@@ -330,12 +335,14 @@ public:
         // 判断是否是给自己拷贝赋值
         // this定义，谁调用它，this就指向谁，因此这里this指向类的对象（被赋值的）
         // 因此&str同样是取类的对象的地址，可以用来判断是不是自己拷贝给自己
+        // 必须有自己检测，不然可能把指向的东西杀掉
         if (this != &str) {
-            // 如果原来有数据要删掉
+            // 如果有数据先要delete掉，不能直接覆盖，因为大小不一定一样
             if (_data) delete _data;
             _len = str._len;
             _init_data(str._data); // COPY!
         }
+        // 自己赋值的话直接跳过就好
         else {
             cout << "Self Assignment, Nothing to do." << endl;
         }
@@ -378,21 +385,35 @@ void test301_move_semantics_with_noexcept()
     cout << "test301_move_semantics_with_noexcept_and_swap().......";
     cout << "\n----------------------------------------------------------\n";
 
+    // 做了一个MyString的容器
     vector<MyString> vec;
-    // without reserve(N); // ?
+    // VIP: 加上reserve后就不怎么会扩容，所以reserve很重要！如果能知道大概大小的话
+    // 扩容是每次乘以2，这个还是比较有效的，在数据少的时候拷贝也还好
+    // vec.reserve(2);
+    // without reserve(N);
+    // 如果没有reserve，那么capcity初值为0
+    cout << "vector capacity is " << vec.capacity() << endl;
 
-    // TODO: 这里的逻辑还有待研究
     // Move Constructor is called! source: jjhou
-    vec.push_back(MyString("jjhou"));
     // Destructor is called! [0]
+    vec.push_back(MyString("jjhou"));
+    cout << "after push 1 element, vector capacity is " << vec.capacity() << endl;
 
-    //Move Constructor is called! source: sabrina
+    // 这里会出现两次，是因为vector自动进行扩展，包含一次内部拷贝
+    // Move Constructor is called! source: sabrina
+    // Move Constructor is called! source: jjhou
+    // Destructor is called! [0]
+    // Destructor is called! [0]
     vec.push_back(MyString("sabrina"));
+    cout << "after push 2 elements, vector capacity is " << vec.capacity() << endl;
 
     vec.push_back(MyString("stacy"));
+    cout << "after push 3 elements, vector capacity is " << vec.capacity() << endl;
+
+    vec.push_back(MyString("yujie"));
+    cout << "after push 4 elements, vector capacity is " << vec.capacity() << endl;
 
     // 以上十分好：
-    // TODO: 第1条没咋看懂
 	//  1, 以 temp obj.放入容器，編譯器知道那是個 Rvalue, 於是呼叫 move ctor 而非 copy ctor.
 	//  2, 當 push_back() 引發 vector 擴展，擴展過程中使用 move 而非 copy.
     cout << "vec.clear() ------- \n";
@@ -401,6 +422,122 @@ void test301_move_semantics_with_noexcept()
     // exit 前會 delete all existing objects.
 }
 
+enum RV { Rvalue, Lvalue };
+
+template<typename Container>
+void test_moveable(Container& cntr, long times, RV option)
+{
+    // 下面三个是一样的
+    // get_type_using_decltype测试了，但是麻烦的是必须先有一个元素来获得
+    typedef typename iterator_traits<typename Container::iterator>::value_type ElemType;
+    typedef typename Container::value_type ElemType2;
+    // 可以用C++ 11的decltype功能，获得container的数据type
+    // 这个就相对编程友好点，不需要事先知道函数定义，不过看起来不是很elegant？
+    auto foo = *(cntr.begin());
+    using ElemType3 = decltype(foo);
+
+
+    char buf[10];
+
+    clock_t timeStart = clock();
+    for (long i=0; i<times; ++i) {
+        // 拼接随机数变成string，赋值到buf里，每个元素一个数字，可能不满
+        snprintf(buf, 10, "%d", rand()); // 随机数
+        // cout << buf[8] << endl;
+        // 在container的最后insert数据
+        auto itr = cntr.end();
+        if (Rvalue == option) {
+            cntr.insert(itr, ElemType3(buf)); // 临时对象
+        }
+        else {
+            ElemType3 elem(buf);
+            cntr.insert(itr, elem);
+        }
+    }
+    cout << "milli-seconds: " << (clock()-timeStart) << endl;
+}
+
+// 验证是否可以通过decltype来获得元素类型
+template<typename Container>
+void get_type_using_decltype(Container& cntr)
+{
+    // 获得Iterator，并*得到元素
+    auto foo = *(cntr.begin());
+    cout << "type of container element is " << typeid(foo).name() << endl;
+
+    decltype(foo) aa;
+    cout << "newly createdly element type is " << typeid(aa).name() << endl;
+
+    typedef typename iterator_traits<typename Container::iterator>::value_type ElemType;
+    typedef typename Container::value_type ElemType2;
+    using new_type = decltype(foo);
+
+    ElemType bb;
+    cout << "ElemType type is " << typeid(bb).name() << endl;
+    ElemType2 bb1;
+    cout << "ElemType2 type is " << typeid(bb1).name() << endl;
+
+    new_type cc;
+    cout << "Using decltype type is " << typeid(cc).name() << endl;
+}
+
+void test_moveable_decltype()
+{
+    MyString str("Hello world!");
+    std::vector<MyString> vec_MyS(10);
+    vec_MyS.push_back(str);
+
+    get_type_using_decltype(vec_MyS);
+}
+
+# define TIMES 100000L
+void test_move_with_nonmove()
+{
+    MyString str("Hello world!");
+    // cout << str << endl; // 没有重载cout
+    int container_size = 50000;
+    {
+        cout << "-------------------------------------------" << endl;
+        cout << "Container-based right value test" << endl;
+        cout << "-------------------------------------------" << endl;
+
+        cout << "\nvector test..." << endl;
+        std::vector<MyString> vec_MyS(container_size);
+        test_moveable(vec_MyS, TIMES, Rvalue);
+        cout << "container size = " << vec_MyS.size() << endl;
+
+        cout << "\nlist test..." << endl;
+        std::list<MyString> lst_MyS(container_size);
+        test_moveable(lst_MyS, TIMES, Rvalue);
+        cout << "container size = " << lst_MyS.size() << endl;
+
+        cout << "\ndeque test..." << endl;
+        std::vector<MyString> deq_MyS(container_size);
+        test_moveable(deq_MyS, TIMES, Rvalue);
+        cout << "container size = " << deq_MyS.size() << endl;
+    }
+    cout << endl;
+    {
+        cout << "-------------------------------------------" << endl;
+        cout << "Container-based left value test" << endl;
+        cout << "-------------------------------------------" << endl;
+
+        cout << "\nvector test..." << endl;
+        std::vector<MyString> vec_MyS(container_size);
+        test_moveable(vec_MyS, TIMES, Lvalue);
+        cout << "container size = " << vec_MyS.size() << endl;
+
+        cout << "\nlist test..." << endl;
+        std::list<MyString> lst_MyS(container_size);
+        test_moveable(lst_MyS, TIMES, Lvalue);
+        cout << "container size = " << lst_MyS.size() << endl;
+
+        cout << "\ndeque test..." << endl;
+        std::vector<MyString> deq_MyS(container_size);
+        test_moveable(deq_MyS, TIMES, Lvalue);
+        cout << "container size = " << deq_MyS.size() << endl;
+    }
+}
 
 }
 
@@ -588,6 +725,10 @@ int main(int argc, char** argv)
     jj48::test48_type_alias();
 
     jj301::test301_move_semantics_with_noexcept();
+
+    // jj301::test_move_with_nonmove();
+
+    // jj301::test_moveable_decltype(); // 一个小测试学习decltype的，内含在test_move_with_nonmove里了
 
     jj06::test06_lambda();
 
