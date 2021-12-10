@@ -319,7 +319,7 @@ public:
 
     // move ctor, with "noexcept"
     // 注意参数类型，是两个&，代表右值引用符号
-    // TODO：加了exception有什么好处？除了exception还要关注别的吗？
+    // 加了exception有什么好处？只有加了后才会调用move ctor，否则默认调用copy ctor！
     // 这里两个指针指向同一个地址，后面一定要把其中一个打断
     MyString(MyString&& str) noexcept : _data(str._data), _len(str._len) {
         cout << "Move Constructor is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
