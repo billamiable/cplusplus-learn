@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <cstring>
 using namespace std;
 
 //----------------------------------------------------
@@ -92,9 +93,86 @@ void test01_this_pointer_by_sizeof()
 
 }
 
+//----------------------------------------------------
+// Factory Method
+//----------------------------------------------------
+namespace jj07
+{
+// Abstract base class declared by framework
+class Document
+{
+public:
+    Document(char* fn) { strcpy(name, fn); }
+private:
+    char name[20];
+};
+
+// Framework declaration
+class App
+{
+public:
+    App(): _index(0)
+    {
+        cout << "App: ctor" << endl;
+    }
+
+    // THe client will call this "entry point" of the framework
+    void NewDocument(char* name)
+    {
+        cout << "App: NewDocument()" << endl;
+        // Framework calls the "hole" reserved
+        _docs[_index] = CreateDocument(name);
+        // _docs[_index++]->Open();
+    }
+
+    // Framework declares a "hole" for the client
+    virtual Document* CreateDocument(char*) = 0;
+private:
+    int _index;
+    // Franework uses Document's base class
+    Document* _docs[20];
+};
+
+// Concrete derived class defined by client
+class MyDoc : public Document
+{
+public:
+    MyDoc(char* fn): Document(fn) {}
+};
+
+// Customization of framework defined
+class MyApp : public App
+{
+public:
+    MyApp()
+    {
+        cout << "  MyApp: ctor" << endl;
+    }
+    // CLient defines Framework's hole
+    Document* CreateDocument(char* fn)
+    {
+        cout << "  MyApp: CreateDocument()" << endl;
+        return new MyDoc(fn);
+    }
+};
+
+void test07_factory_method()
+{
+    // Client's customization
+    MyApp myApp;
+
+    myApp.NewDocument("foo");
+    // myApp.NewDocument("bar");
+}
+
+
+}
+
 int main(int argc, char** argv) 
 {
     cout << "c++ version " << __cplusplus << endl;
 
     yj01::test01_this_pointer_by_sizeof();
+
+    jj07::test07_factory_method();
 }
