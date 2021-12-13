@@ -159,8 +159,14 @@ public:
 void test07_factory_method()
 {
     // Client's customization
+    // 创建对象时，会先调用父类的构造函数，所谓从里到外的构造才坚实
     MyApp myApp;
 
+    // 由于子类继承了所有父类函数的调用权，包括NewDocument，因此可以直接调用
+    // 然后由于父类无法直接获得子类创建的class名称（在这里是MyDoc）
+    // 要想获得则需要通过虚函数、指针、向上转型三要素
+    // 即定义虚函数CreateDocument，用Document*指针，将MyDoc的子类指针向上转型成了Document*
+    // 从而最后在父类中将子类创建的MyDoc对象存在_docs数组里
     myApp.NewDocument("foo");
     // myApp.NewDocument("bar");
 }
