@@ -4,7 +4,7 @@
 using namespace std;
 
 //----------------------------------------------------
-// This Pointer by Sizeof
+// Draw using Polymorphism
 //----------------------------------------------------
 namespace yj01
 {
@@ -64,7 +64,7 @@ void drawAll(const vector<Shape*>& v)
     }
 }
 
-void test01_this_pointer_by_sizeof()
+void test01_draw_using_polymorphism()
 {
     Rect r1;
     Square q1;
@@ -201,7 +201,7 @@ int main(int argc, char** argv)
 {
     cout << "c++ version " << __cplusplus << endl;
 
-    yj01::test01_this_pointer_by_sizeof();
+    yj01::test01_draw_using_polymorphism();
 
     jj07::test07_factory_method();
 }
