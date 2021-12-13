@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <any>
 using namespace std;
 
 //----------------------------------------------------
@@ -88,6 +89,96 @@ void test01_draw_using_polymorphism()
     v.push_back(&q1);
     v.push_back(new Circle);
     v.push_back(new Ellipse);
+    drawAll(v);
+}
+
+}
+
+//----------------------------------------------------
+// Draw not using Polymorphism
+//----------------------------------------------------
+namespace yj02
+{
+class Shape
+{
+public:
+    void draw() { cout << "Shape" << endl; }
+};
+
+class Rect
+{
+public:
+    void draw() { cout << "Rect" << endl; };
+private:
+    int length;
+    int height;
+};
+
+class Square
+{
+public:
+    void draw() { cout << "Square" << endl; };
+private:
+    int length;
+    int height;
+};
+
+class Ellipse
+{
+public:
+    void draw() { cout << "Ellipse" << endl; };
+private:
+    int x,y;
+    int r1,r2;
+};
+
+class Circle
+{
+public:
+    void draw() { cout << "Circle" << endl; };
+private:
+    int x,y;
+    int r1,r2;
+};
+
+void drawAll(const vector<any>& v)
+{
+    for (auto& i : v) {
+        if (i.type() == typeid(Rect))
+            any_cast<Rect>(i).draw();
+        else if (i.type() == typeid(Square))
+            any_cast<Square>(i).draw();
+        else if (i.type() == typeid(Ellipse))
+            any_cast<Ellipse>(i).draw();
+        else if (i.type() == typeid(Circle))
+            any_cast<Circle>(i).draw();
+    }
+}
+
+void test02_draw_not_using_polymorphism()
+{
+    Rect r1;
+    Square q1;
+
+    r1.draw(); // Rect
+    q1.draw(); // Square
+
+    Rect* pr = new Rect;
+    pr->draw(); // Rect
+    delete pr;
+
+    cout << sizeof(Shape) << endl;   // 1
+    cout << sizeof(Rect) << endl;    // 8，多了两个数据
+    cout << sizeof(Square) << endl;  // 8，同上
+    cout << sizeof(Ellipse) << endl; // 16，多了四个数据
+    cout << sizeof(Circle) << endl;  // 16，同上
+
+    vector<any> v;
+    // 注意下面不再传指针了，而是对象
+    v.push_back(r1);
+    v.push_back(q1);
+    v.push_back(Circle());
+    v.push_back(Ellipse());
     drawAll(v);
 }
 
@@ -202,6 +293,8 @@ int main(int argc, char** argv)
     cout << "c++ version " << __cplusplus << endl;
 
     yj01::test01_draw_using_polymorphism();
+
+    yj02::test02_draw_not_using_polymorphism();
 
     jj07::test07_factory_method();
 }
