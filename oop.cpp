@@ -1,6 +1,6 @@
 #include <iostream>
 #include <vector>
-#include <cstring>
+#include <string>
 using namespace std;
 
 //----------------------------------------------------
@@ -102,8 +102,13 @@ namespace jj07
 class Document
 {
 public:
+    // 这里strcpy相当于保存了字符串名称
     Document(const char* fn) { strcpy(name, fn); }
+    virtual void Open() = 0;
+    virtual void Close() = 0;
+    char* GetName() { return name; }
 private:
+    // 这里存的是"foo"和"bar"这两个name
     char name[20];
 };
 
@@ -122,7 +127,15 @@ public:
         cout << "App: NewDocument()" << endl;
         // Framework calls the "hole" reserved
         _docs[_index] = CreateDocument(name);
-        // _docs[_index++]->Open();
+        _docs[_index++]->Open(); // 先执行_index的处理，再++
+    }
+
+    // 这里之所以可以调用到是因为父类存下来了MyDoc的对象
+    void ReportDocs()
+    {
+        cout << "App: ReportDocs()" << endl;
+        for (int i=0; i<_index; ++i)
+            cout << "  " << _docs[i]->GetName() << endl;
     }
 
     // Framework declares a "hole" for the client
@@ -138,6 +151,14 @@ class MyDoc : public Document
 {
 public:
     MyDoc(const char* fn): Document(fn) {}
+    virtual void Open()
+    {
+        cout << "  MyDoc: Open()" << endl;
+    }
+    virtual void Close()
+    {
+        cout << "  MyDoc: Close()" << endl;
+    }
 };
 
 // Customization of framework defined
@@ -163,12 +184,14 @@ void test07_factory_method()
     MyApp myApp;
 
     // 由于子类继承了所有父类函数的调用权，包括NewDocument，因此可以直接调用
-    // 然后由于父类无法直接获得子类创建的class名称（在这里是MyDoc）
+    // 然后由于父类无法直接获得子类创建的class名称（在这里是MyDoc），其实这里对象都存了？
     // 要想获得则需要通过虚函数、指针、向上转型三要素
     // 即定义虚函数CreateDocument，用Document*指针，将MyDoc的子类指针向上转型成了Document*
     // 从而最后在父类中将子类创建的MyDoc对象存在_docs数组里
     myApp.NewDocument("foo");
-    // myApp.NewDocument("bar");
+    myApp.NewDocument("bar");
+    // 针对存下来的东西进行后续的处理
+    myApp.ReportDocs();
 }
 
 
