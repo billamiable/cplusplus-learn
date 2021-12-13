@@ -293,7 +293,7 @@ namespace jj301
 // 以下的 MyString 和 jj30 中的唯一差異是 noexcept for move functions. 結果十分良好.
 
 class MyString {
-private:
+public:
     char* _data;
     size_t _len;
     void _init_data(const char *s) {
@@ -312,7 +312,7 @@ public:
 
     // copy ctor
     MyString(const MyString& str) : _len(str._len) {
-        // print的内容是内存位置？
+        // print内存位置，主要是为了看在析构时哪里的内存被释放了
         cout << "Copy Constructor is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
         _init_data(str._data); 	// COPY!
     }
@@ -324,8 +324,10 @@ public:
     MyString(MyString&& str) noexcept : _data(str._data), _len(str._len) {
         cout << "Move Constructor is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
         // 这里的数据复制在上面一行里了，下面只是防止两个指针指向同一个位置，需要删除
+        // TODO: 为何还要改成default value？感觉这个没影响，可能就是习惯比较好
         str._len = 0;
         // 这一行特别重要，如果没有的话，临时对象析构的时候会自动把数据删掉
+        // 不然会报pointer being freed was not allocated
         str._data = NULL; // 避免 delete (in dtor)
     }
 
@@ -404,14 +406,18 @@ void test301_move_semantics_with_noexcept()
     // Move Constructor is called! source: jjhou
     // Destructor is called! [0]
     // Destructor is called! [0]
-    vec.push_back(MyString("sabrina"));
-    cout << "after push 2 elements, vector capacity is " << vec.capacity() << endl;
+    // vec.push_back(MyString("sabrina"));
+    // cout << "after push 2 elements, vector capacity is " << vec.capacity() << endl;
 
-    vec.push_back(MyString("stacy"));
-    cout << "after push 3 elements, vector capacity is " << vec.capacity() << endl;
+    // vec.push_back(MyString("stacy"));
+    // cout << "after push 3 elements, vector capacity is " << vec.capacity() << endl;
 
-    vec.push_back(MyString("yujie"));
-    cout << "after push 4 elements, vector capacity is " << vec.capacity() << endl;
+    // vec.push_back(MyString("yujie"));
+    // cout << "after push 4 elements, vector capacity is " << vec.capacity() << endl;
+
+    for (auto& v : vec) {
+        cout << "data is " << v._data << endl;
+    }
 
     // 以上十分好：
 	//  1, 以 temp obj.放入容器，編譯器知道那是個 Rvalue, 於是呼叫 move ctor 而非 copy ctor.
@@ -659,7 +665,15 @@ void test12_Rvalue_Move()
     cout << "s1: " << s1 << endl; // aaaa
     cout << "s2: " << s2 << endl; // bbbb
 
-    // TODO: 这是为啥？？而且只有s1没了？？
+    s = move(s1);
+    cout << "s: "  << s  << endl; // aaaabbbb
+    cout << "s1: " << s1 << endl;
+
+    s = move(s2);
+    cout << "s: "  << s  << endl; // aaaabbbb
+    cout << "s2: " << s2 << endl;
+
+    // TODO: 普通情况下用了Move都是后面不能用了，但是在相加时却不是？
     s = move(s1) + move(s2);
     cout << "s: "  << s  << endl; // aaaabbbb
     cout << "s1: " << s1 << endl; //
@@ -715,11 +729,83 @@ void test50_hash()
 
 }
 
+
+//----------------------------------------------------
+// Push_back vs Emplace_back
+//----------------------------------------------------
+namespace yj01
+{
+// TODO: emplace_back输入必须是右值？那为啥在源代码还要再用std::move处理输入
+// push_back有两种重载函数，右值对应emplace_back事先
+// emplace_back输入数据后面还可以用吗？
+class President
+{
+public:
+    President(string p_name, int p_year) : name(p_name), year(p_year)
+    {
+        cout << "ctor is called" << endl;
+    }
+
+    President(const President& other) : name(other.name), year(other.year) {
+        cout << "copy ctor is called" << endl;
+    }
+
+    // 注意：只有在使用noexcept的时候，vector扩展才会调用move ctor
+    // 但是与是否使用std::move无关
+    // TODO: 为何要用std::move呢？而且move了后面应该用不了了啊？
+    President(President&& other) noexcept : name(std::move(other.name)), year(other.year)
+    // President(President&& other) : name(std::move(other.name)), year(other.year)
+    // President(President&& other) noexcept : name(other.name), year(other.year)
+    {
+        cout << "move ctor is called" << endl;
+    }
+
+    President& operator=(const President& other) = default;
+
+// private:
+    string name;
+    int year;
+};
+
+void test01_emplace_back()
+{
+    vector<President> elections;
+    // elections.reserve(10);
+    cout << "...push_back left value..." << endl;
+    President p1("Franklin", 1936);
+    President p2("Nelson", 1994);
+    President p3("Billy", 2030);
+    elections.push_back(p1);
+    cout << ".." << endl;
+    elections.push_back(p2);
+    cout << ".." << endl;
+    elections.push_back(p3);
+    cout << "...push_back right value..." << endl;
+    // elections.push_back(President("Franklin", 1936));
+    // cout << ".." << endl;
+    // elections.push_back(President("Nelson", 1994));
+    // cout << ".." << endl;
+    // elections.push_back(President("Billy", 2030));
+
+
+    // cout << "...emplace_back..." << endl;
+    // elections.emplace_back(President("Nelson", 1994));
+
+    // print result
+    // 注意：一定要用auto&，不然这里会调用拷贝构造函数！
+    for (auto& p : elections) {
+        cout << "name is " << p.name << ", year is " << p.year << endl;
+    }
+}
+
+}
+
 //---------------------------------------------------
 int main(int argc, char** argv) 
 {
     cout << "c++ version " << __cplusplus << endl;
 
+    /*
     jj15::test15_variadic_template();
 
     jj48::test48_type_alias();
@@ -735,4 +821,9 @@ int main(int argc, char** argv)
     jj12::test12_Rvalue_Move();
 
     jj50::test50_hash();
+    */
+
+    // jj301::test301_move_semantics_with_noexcept();
+    // yj01::test01_emplace_back();
+    jj12::test12_Rvalue_Move();
 }
