@@ -102,7 +102,7 @@ namespace jj07
 class Document
 {
 public:
-    Document(char* fn) { strcpy(name, fn); }
+    Document(const char* fn) { strcpy(name, fn); }
 private:
     char name[20];
 };
@@ -117,7 +117,7 @@ public:
     }
 
     // THe client will call this "entry point" of the framework
-    void NewDocument(char* name)
+    void NewDocument(const char* name)
     {
         cout << "App: NewDocument()" << endl;
         // Framework calls the "hole" reserved
@@ -126,7 +126,7 @@ public:
     }
 
     // Framework declares a "hole" for the client
-    virtual Document* CreateDocument(char*) = 0;
+    virtual Document* CreateDocument(const char*) = 0;
 private:
     int _index;
     // Franework uses Document's base class
@@ -137,7 +137,7 @@ private:
 class MyDoc : public Document
 {
 public:
-    MyDoc(char* fn): Document(fn) {}
+    MyDoc(const char* fn): Document(fn) {}
 };
 
 // Customization of framework defined
@@ -149,7 +149,7 @@ public:
         cout << "  MyApp: ctor" << endl;
     }
     // CLient defines Framework's hole
-    Document* CreateDocument(char* fn)
+    Document* CreateDocument(const char* fn)
     {
         cout << "  MyApp: CreateDocument()" << endl;
         return new MyDoc(fn);
