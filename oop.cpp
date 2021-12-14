@@ -2,6 +2,9 @@
 #include <vector>
 #include <string>
 #include <any>
+#include <cassert>
+#include <typeinfo>
+#include <list>
 using namespace std;
 
 //----------------------------------------------------
@@ -288,6 +291,91 @@ void test07_factory_method()
 
 }
 
+//----------------------------------------------------
+// Any Reimplementation
+//----------------------------------------------------
+namespace jj08
+{
+class myAny
+{
+public:
+    class placeholder
+    {
+    public:
+        virtual ~placeholder()
+        {
+            cout << "placeholder dtor" << endl;
+        }
+        // virtual const type_info
+        virtual placeholder* clone() const = 0;
+    };
+    template<typename T>
+    class holder : public placeholder
+    {
+    public:
+        holder(const T& value): held(value)
+        {
+            cout << "holder ctor" << endl;
+        }
+
+        // 看起来是一个深拷贝，但最后是父类指针，指向子类对象
+        virtual placeholder* clone() const
+        {
+            cout << "holder clone" << endl;
+            return new holder(held);
+        }
+
+        T held; // 真正的资料保存在这里
+    };
+
+public:
+    myAny() : content(NULL)
+    {
+        cout << "myAny ctor" << endl;
+    }
+
+    // template ctor，参数可以为任意的type，真正资料保存在content里
+    template<typename T>
+    myAny(const T& value): content(new holder<T>(value))
+    {
+        cout << "myAny template ctor" << endl;
+    }
+
+    // copy ctor，0就代表了NULL指针
+    myAny(const myAny& other): content(other.content ? other.content->clone() : 0)
+    {
+        cout << "myAny copy ctor" << endl;
+    }
+
+    ~myAny()
+    {
+        cout << "myAny dtor" << endl;
+        if (content != NULL)
+            delete content;
+    }
+private:
+    placeholder* content;
+};
+
+typedef list<myAny> list_any;
+
+void fill_list(list_any& la)
+{
+    // TODO: 单个的输出就很多，为啥呢？
+    la.push_back(10);
+    // la.push_back(string("I am a string"));
+    // const char* p = "I am char arry";
+    // la.push_back(p);
+}
+
+void test08_any_reimplementation()
+{
+    list_any la;
+    fill_list(la);
+}
+
+}
+
 int main(int argc, char** argv) 
 {
     cout << "c++ version " << __cplusplus << endl;
@@ -297,4 +385,6 @@ int main(int argc, char** argv)
     yj02::test02_draw_not_using_polymorphism();
 
     jj07::test07_factory_method();
+
+    jj08::test08_any_reimplementation();
 }
