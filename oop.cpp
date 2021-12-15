@@ -382,19 +382,32 @@ void test08_any_reimplementation()
 //----------------------------------------------------
 namespace dp02
 {
+// 这里感觉啥也没有，只有一个update的纯虚函数，实现都在子类
 class Observer
 {
 public:
-    // TODO: check是否要写
-    // virtual ~Observer() {};
+    // 一般来说，虚析构函数是用于继承体系里，指向子类的父类指针在被delete时
+    // 如果父类没有虚析构函数，就只会调用父类的析构函数，而不会调用子类的析构函数
+    // 从而如果子类用了指针数据，就会造成内存泄露
+    // 因此，常用的做法就是在父类里都定义一个虚析构函数，从而释放子类的内存
+    // 这里其实是可以不用加的，因为没有指针数据
+    virtual ~Observer()
+    {
+        cout << "observer dctor" << endl;
+    };
     virtual void update(int value) = 0;
 };
 
 // 这个的顺序比较重要！不然就会找不到，把父类都放在最前面
+// 这个在实际使用时还可以派生一些子类来使用
 class Subject
 {
 public:
-    // virtual ~Subject() {};
+    // 这里讲道理都是要加虚析构函数，因为里面有指针对象
+    virtual ~Subject()
+    {
+        cout << "subject dctor" << endl;
+    };
     void attach(Observer* obs)
     {
         cout << "attach..." << endl;
@@ -403,7 +416,10 @@ public:
     void set_value(int value)
     {
         cout << "set value" << endl;
+        // 这里set value相当于改的是全局的
+        // 因为m_value会在notify函数中用于update observer里的数据
         m_value = value;
+        // 下面这个函数其实是可以直接写在这里的
         notify();
     }
     void notify()
@@ -412,23 +428,30 @@ public:
         for(int i=0; i<m_views.size(); ++i)
             m_views[i]->update(m_value);
     }
-    int get_value()
-    {
-        return m_value;
-    }
 private:
     int m_value;
+    // 符合strategy设计模式
+    // 本质都是类中有指针指向另一个父类
+    // 该父类可以有许多派生的子类
+    // 由于这里存了父类指针指向子类对象，即可以很方便使用多态特性
+    // 从而对子类进行改动
     vector<Observer*> m_views;
 };
 
 class Observer1 : public Observer
 {
 public:
+    // 接受指向别的类的指针作为参数
     Observer1(Subject* model, int div)
     {
         cout << "observer1 ctor" << endl;
+        // 创建一个Observer1对象的同时将它attach到Subject类里面
         model->attach(this);
         m_div = div;
+    }
+    ~Observer1()
+    {
+        cout << "observer1 dtor" << endl;
     }
     virtual void update(int v)
     {
@@ -454,6 +477,7 @@ void test02_observer()
 
     subj.set_value(1);
 
+    // set后两个observer的value都会变成1
     cout << "Observer 1 value " << o1.get_value() << endl;
     cout << "Observer 2 value " << o2.get_value() << endl;
 }
