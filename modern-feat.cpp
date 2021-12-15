@@ -7,10 +7,12 @@
 #include <list>
 #include <deque>
 #include <string>
+#include <cstring>
 #include <bitset>
 #include <memory>
 #include <complex>
 #include <ctime>
+#include <algorithm>
 using namespace std;
 
 //----------------------------------------------------

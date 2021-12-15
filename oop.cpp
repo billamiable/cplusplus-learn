@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <cstring>
 #include <any>
 #include <cassert>
 #include <typeinfo>
@@ -376,6 +377,90 @@ void test08_any_reimplementation()
 
 }
 
+//----------------------------------------------------
+// Design Pattern: Observer
+//----------------------------------------------------
+namespace dp02
+{
+class Observer
+{
+public:
+    // TODO: check是否要写
+    // virtual ~Observer() {};
+    virtual void update(int value) = 0;
+};
+
+// 这个的顺序比较重要！不然就会找不到，把父类都放在最前面
+class Subject
+{
+public:
+    // virtual ~Subject() {};
+    void attach(Observer* obs)
+    {
+        cout << "attach..." << endl;
+        m_views.push_back(obs);
+    }
+    void set_value(int value)
+    {
+        cout << "set value" << endl;
+        m_value = value;
+        notify();
+    }
+    void notify()
+    {
+        cout << "notify..." << endl;
+        for(int i=0; i<m_views.size(); ++i)
+            m_views[i]->update(m_value);
+    }
+    int get_value()
+    {
+        return m_value;
+    }
+private:
+    int m_value;
+    vector<Observer*> m_views;
+};
+
+class Observer1 : public Observer
+{
+public:
+    Observer1(Subject* model, int div)
+    {
+        cout << "observer1 ctor" << endl;
+        model->attach(this);
+        m_div = div;
+    }
+    virtual void update(int v)
+    {
+        cout << "update in observer1" << endl;
+        m_div = v;
+    }
+    int get_value()
+    {
+        return m_div;
+    }
+private:
+    int m_div;
+};
+
+void test02_observer()
+{
+    Subject subj;
+    Observer1 o1(&subj, 4);
+    Observer1 o2(&subj, 3);
+
+    cout << "Observer 1 value " << o1.get_value() << endl;
+    cout << "Observer 2 value " << o2.get_value() << endl;
+
+    subj.set_value(1);
+
+    cout << "Observer 1 value " << o1.get_value() << endl;
+    cout << "Observer 2 value " << o2.get_value() << endl;
+}
+
+}
+
+
 int main(int argc, char** argv) 
 {
     cout << "c++ version " << __cplusplus << endl;
@@ -387,4 +472,6 @@ int main(int argc, char** argv)
     jj07::test07_factory_method();
 
     jj08::test08_any_reimplementation();
+
+    dp02::test02_observer();
 }
