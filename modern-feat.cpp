@@ -489,8 +489,12 @@ void get_type_using_decltype(Container& cntr)
     cout << "Using decltype type is " << typeid(cc).name() << endl;
 }
 
-void test_moveable_decltype()
+void test301_moveable_decltype()
 {
+    cout << "\n----------------------------------------------------------\n";
+    cout << "test301_moveable_decltype()..........";
+    cout << "\n----------------------------------------------------------\n";
+
     MyString str("Hello world!");
     std::vector<MyString> vec_MyS(10);
     vec_MyS.push_back(str);
@@ -499,8 +503,12 @@ void test_moveable_decltype()
 }
 
 # define TIMES 100000L
-void test_move_with_nonmove()
+void test301_move_with_nonmove()
 {
+    cout << "\n----------------------------------------------------------\n";
+    cout << "test301_move_with_nonmove()..........";
+    cout << "\n----------------------------------------------------------\n";
+
     MyString str("Hello world!");
     // cout << str << endl; // 没有重载cout
     int container_size = 50000;
@@ -771,6 +779,10 @@ public:
 
 void test01_emplace_back()
 {
+    cout << "\n----------------------------------------------------------\n";
+    cout << "test01_emplace_back()..........";
+    cout << "\n----------------------------------------------------------\n";
+
     vector<President> elections;
     // elections.reserve(10);
     cout << "...push_back left value..." << endl;
@@ -814,9 +826,9 @@ int main(int argc, char** argv)
 
     jj301::test301_move_semantics_with_noexcept();
 
-    // jj301::test_move_with_nonmove();
+    // jj301::test301_move_with_nonmove();
 
-    // jj301::test_moveable_decltype(); // 一个小测试学习decltype的，内含在test_move_with_nonmove里了
+    // jj301::test301_moveable_decltype(); // 一个小测试学习decltype的，内含在test301_move_with_nonmove里了
 
     jj06::test06_lambda();
 

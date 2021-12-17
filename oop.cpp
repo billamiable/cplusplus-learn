@@ -71,6 +71,10 @@ void drawAll(const vector<Shape*>& v)
 
 void test01_draw_using_polymorphism()
 {
+    cout << "\n----------------------------------------------------------\n";
+    cout << "test01_draw_using_polymorphism()..........";
+    cout << "\n----------------------------------------------------------\n";
+
     Rect r1;
     Square q1;
 
@@ -161,6 +165,10 @@ void drawAll(const vector<any>& v)
 
 void test02_draw_not_using_polymorphism()
 {
+    cout << "\n----------------------------------------------------------\n";
+    cout << "test02_draw_not_using_polymorphism()..........";
+    cout << "\n----------------------------------------------------------\n";
+
     Rect r1;
     Square q1;
 
@@ -274,6 +282,10 @@ public:
 
 void test07_factory_method()
 {
+    cout << "\n----------------------------------------------------------\n";
+    cout << "test07_factory_method()..........";
+    cout << "\n----------------------------------------------------------\n";
+
     // Client's customization
     // 创建对象时，会先调用父类的构造函数，所谓从里到外的构造才坚实
     MyApp myApp;
@@ -371,6 +383,10 @@ void fill_list(list_any& la)
 
 void test08_any_reimplementation()
 {
+    cout << "\n----------------------------------------------------------\n";
+    cout << "test08_any_reimplementation()..........";
+    cout << "\n----------------------------------------------------------\n";
+
     list_any la;
     fill_list(la);
 }
@@ -411,43 +427,45 @@ public:
     void attach(Observer* obs)
     {
         cout << "attach..." << endl;
-        m_views.push_back(obs);
+        views_.push_back(obs);
+    }
+    void detach(Observer* obs)
+    {
+        cout << "detach..." << endl;
+        remove(views_.begin(), views_.end(), obs);
     }
     void set_value(int value)
     {
         cout << "set value" << endl;
         // 这里set value相当于改的是全局的
-        // 因为m_value会在notify函数中用于update observer里的数据
-        m_value = value;
+        // 因为value_会在notify函数中用于update observer里的数据
+        value_ = value;
         // 下面这个函数其实是可以直接写在这里的
         notify();
     }
     void notify()
     {
         cout << "notify..." << endl;
-        for(int i=0; i<m_views.size(); ++i)
-            m_views[i]->update(m_value);
+        for(int i=0; i<views_.size(); ++i)
+            views_[i]->update(value_);
     }
 private:
-    int m_value;
+    int value_;
     // 符合strategy设计模式
     // 本质都是类中有指针指向另一个父类
     // 该父类可以有许多派生的子类
     // 由于这里存了父类指针指向子类对象，即可以很方便使用多态特性
     // 从而对子类进行改动
-    vector<Observer*> m_views;
+    vector<Observer*> views_;
 };
 
 class Observer1 : public Observer
 {
 public:
-    // 接受指向别的类的指针作为参数
-    Observer1(Subject* model, int div)
+    // 这样的写法比较清晰，在Observer的对象里不再传subject指针或者对象
+    Observer1(int div) : div_(div)
     {
         cout << "observer1 ctor" << endl;
-        // 创建一个Observer1对象的同时将它attach到Subject类里面
-        model->attach(this);
-        m_div = div;
     }
     ~Observer1()
     {
@@ -456,21 +474,28 @@ public:
     virtual void update(int v)
     {
         cout << "update in observer1" << endl;
-        m_div = v;
+        div_ = v;
     }
     int get_value()
     {
-        return m_div;
+        return div_;
     }
 private:
-    int m_div;
+    int div_;
 };
 
 void test02_observer()
 {
+    cout << "\n----------------------------------------------------------\n";
+    cout << "test02_observer()..........";
+    cout << "\n----------------------------------------------------------\n";
+
     Subject subj;
-    Observer1 o1(&subj, 4);
-    Observer1 o2(&subj, 3);
+    Observer1 o1(4);
+    Observer1 o2(3);
+
+    subj.attach(&o1);
+    subj.attach(&o2);
 
     cout << "Observer 1 value " << o1.get_value() << endl;
     cout << "Observer 2 value " << o2.get_value() << endl;
@@ -480,6 +505,10 @@ void test02_observer()
     // set后两个observer的value都会变成1
     cout << "Observer 1 value " << o1.get_value() << endl;
     cout << "Observer 2 value " << o2.get_value() << endl;
+
+    subj.detach(&o1);
+
+    cout << "Detached o1" << endl;
 }
 
 }
