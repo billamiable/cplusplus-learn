@@ -6,6 +6,7 @@
 #include <cassert>
 #include <typeinfo>
 #include <list>
+#include <algorithm>
 using namespace std;
 
 //----------------------------------------------------

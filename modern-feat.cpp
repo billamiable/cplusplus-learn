@@ -323,6 +323,8 @@ public:
     // 注意参数类型，是两个&，代表右值引用符号
     // 加了exception有什么好处？只有加了后才会调用move ctor，否则默认调用copy ctor！
     // 这里两个指针指向同一个地址，后面一定要把其中一个打断
+    // 注意：这里对于str._data进行std::move是没有意义的，因为move只是申明这个object后面
+    // 可能会被偷，在实际赋值时直接让指针改变指向实现，因此对于指针进行move是没有意义的！
     MyString(MyString&& str) noexcept : _data(str._data), _len(str._len) {
         cout << "Move Constructor is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
         // 这里的数据复制在上面一行里了，下面只是防止两个指针指向同一个位置，需要删除
@@ -470,9 +472,12 @@ template<typename Container>
 void get_type_using_decltype(Container& cntr)
 {
     // 获得Iterator，并*得到元素
+    // 这里会自动调用copy ctor
+    // 但是如果vector事先定了capacity，这里却会调用move ctor？
     auto foo = *(cntr.begin());
     cout << "type of container element is " << typeid(foo).name() << endl;
 
+    // 注意：这里只是声明，没有定义！
     decltype(foo) aa;
     cout << "newly createdly element type is " << typeid(aa).name() << endl;
 
@@ -745,9 +750,9 @@ void test50_hash()
 //----------------------------------------------------
 namespace yj01
 {
-// TODO: emplace_back输入必须是右值？那为啥在源代码还要再用std::move处理输入
-// push_back有两种重载函数，右值对应emplace_back事先
-// emplace_back输入数据后面还可以用吗？
+// TODO: emplace_back输入是universal reference，所以再用std::move处理输入即用rvalue
+// push_back有两种重载函数，右值输入内部直接调用到emplace_back函数
+// emplace_back输入数据后面可以用，只是内部会操作
 class President
 {
 public:
@@ -761,10 +766,9 @@ public:
     }
 
     // 注意：只有在使用noexcept的时候，vector扩展才会调用move ctor
-    // 但是与是否使用std::move无关
-    // TODO: 为何要用std::move呢？而且move了后面应该用不了了啊？
+    // 但是与是否使用std::move无关，move了后面就用不了
+    // TODO: 为何要用std::move呢？我觉得是写法这样比较规范
     President(President&& other) noexcept : name(std::move(other.name)), year(other.year)
-    // President(President&& other) : name(std::move(other.name)), year(other.year)
     // President(President&& other) noexcept : name(other.name), year(other.year)
     {
         cout << "move ctor is called" << endl;
@@ -772,7 +776,12 @@ public:
 
     President& operator=(const President& other) = default;
 
-// private:
+    void print()
+    {
+        cout << "name is " << name << ", year is " << year << endl;
+    }
+
+private:
     string name;
     int year;
 };
@@ -786,30 +795,47 @@ void test01_emplace_back()
     vector<President> elections;
     // elections.reserve(10);
     cout << "...push_back left value..." << endl;
-    President p1("Franklin", 1936);
-    President p2("Nelson", 1994);
-    President p3("Billy", 2030);
-    elections.push_back(p1);
-    cout << ".." << endl;
-    elections.push_back(p2);
-    cout << ".." << endl;
-    elections.push_back(p3);
+    // President p1("Franklin", 1936);
+    // President p2("Nelson", 1994);
+    // President p3("Billy", 2030);
+    // elections.push_back(p1);
+    // cout << ".." << endl;
+    // elections.push_back(p2);
+    // cout << ".." << endl;
+    // elections.push_back(p3);
     cout << "...push_back right value..." << endl;
-    // elections.push_back(President("Franklin", 1936));
-    // cout << ".." << endl;
-    // elections.push_back(President("Nelson", 1994));
-    // cout << ".." << endl;
-    // elections.push_back(President("Billy", 2030));
-
-
-    // cout << "...emplace_back..." << endl;
-    // elections.emplace_back(President("Nelson", 1994));
+    elections.push_back(President("Franklin", 1936));
+    cout << ".." << endl;
+    elections.push_back(President("Nelson", 1994));
+    cout << ".." << endl;
+    elections.push_back(President("Billy", 2030));
+    cout << ".." << endl;
+    elections.push_back(President("Patty", 2050));
 
     // print result
     // 注意：一定要用auto&，不然这里会调用拷贝构造函数！
-    for (auto& p : elections) {
-        cout << "name is " << p.name << ", year is " << p.year << endl;
-    }
+    for (auto& p : elections) p.print();
+
+    vector<President> elections1;
+    cout << "...emplace_back left value..." << endl;
+    // President p1("Franklin", 1936);
+    // elections1.emplace_back(p1);
+    // p1.print();
+
+    cout << "...emplace_back right value..." << endl;
+    // elections1.emplace_back(President("Nelson", 1994));
+    // 只有用下面这种方法，才可以免去move ctor，不然上面的还是和原来的一样
+    // 这个还挺神奇的，属于是高阶功能了，自动调用构造函数，这样才会使用container里事先有的内存
+    // TODO: 结果是每个都少了一次move ctor，好像还是有点提升的，具体以后再看看
+    elections1.emplace_back("Franklin", 1936);
+    cout << ".." << endl;
+    elections1.emplace_back("Nelson",   1994);
+    cout << ".." << endl;
+    elections1.emplace_back("Billy",    2030);
+    cout << ".." << endl;
+    elections1.emplace_back("Patty",    2050);
+
+    for (auto& p : elections1) p.print();
 }
 
 }
@@ -819,7 +845,6 @@ int main(int argc, char** argv)
 {
     cout << "c++ version " << __cplusplus << endl;
 
-    /*
     jj15::test15_variadic_template();
 
     jj48::test48_type_alias();
@@ -835,9 +860,6 @@ int main(int argc, char** argv)
     jj12::test12_Rvalue_Move();
 
     jj50::test50_hash();
-    */
 
-    // jj301::test301_move_semantics_with_noexcept();
-    // yj01::test01_emplace_back();
-    jj12::test12_Rvalue_Move();
+    yj01::test01_emplace_back();
 }
