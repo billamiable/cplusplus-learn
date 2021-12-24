@@ -295,9 +295,10 @@ namespace jj301
 // 以下的 MyString 和 jj30 中的唯一差異是 noexcept for move functions. 結果十分良好.
 
 class MyString {
-public:
+private:
     char* _data;
     size_t _len;
+    bool _print;
     void _init_data(const char *s) {
         _data = new char[_len+1];
         memcpy(_data, s, _len);
@@ -305,17 +306,18 @@ public:
     }
 public:
     // default ctor
-    MyString() : _data(NULL), _len(0) { }
+    MyString(bool print = true) : _data(NULL), _len(0), _print(print) { }
 
     // ctor
-    MyString(const char* p) : _len(strlen(p)) {
+    MyString(const char* p, bool print = true) : _len(strlen(p)), _print(print) {
         _init_data(p);
     }
 
     // copy ctor
-    MyString(const MyString& str) : _len(str._len) {
+    MyString(const MyString& str) : _len(str._len), _print(str._print) {
         // print内存位置，主要是为了看在析构时哪里的内存被释放了
-        cout << "Copy Constructor is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
+        if (_print)
+            cout << "Copy Constructor is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
         _init_data(str._data); 	// COPY!
     }
 
@@ -325,11 +327,13 @@ public:
     // 这里两个指针指向同一个地址，后面一定要把其中一个打断
     // 注意：这里对于str._data进行std::move是没有意义的，因为move只是申明这个object后面
     // 可能会被偷，在实际赋值时直接让指针改变指向实现，因此对于指针进行move是没有意义的！
-    MyString(MyString&& str) noexcept : _data(str._data), _len(str._len) {
-        cout << "Move Constructor is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
+    MyString(MyString&& str) noexcept : _data(str._data), _len(str._len), _print(str._print) {
+        if (_print)
+            cout << "Move Constructor is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
         // 这里的数据复制在上面一行里了，下面只是防止两个指针指向同一个位置，需要删除
         // TODO: 为何还要改成default value？感觉这个没影响，可能就是习惯比较好
         str._len = 0;
+        str._print = false;
         // 这一行特别重要，如果没有的话，临时对象析构的时候会自动把数据删掉
         // 不然会报pointer being freed was not allocated
         str._data = NULL; // 避免 delete (in dtor)
@@ -337,7 +341,8 @@ public:
 
     // copy assignment
     MyString& operator=(const MyString& str) {
-        cout << "Copy Assignment is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
+        if (str._print)
+            cout << "Copy Assignment is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
         // 判断是否是给自己拷贝赋值
         // this定义，谁调用它，this就指向谁，因此这里this指向类的对象（被赋值的）
         // 因此&str同样是取类的对象的地址，可以用来判断是不是自己拷贝给自己
@@ -346,6 +351,7 @@ public:
             // 如果有数据先要delete掉，不能直接覆盖，因为大小不一定一样
             if (_data) delete _data;
             _len = str._len;
+            _print = str._print;
             _init_data(str._data); // COPY!
         }
         // 自己赋值的话直接跳过就好
@@ -357,13 +363,16 @@ public:
 
     // move assignment
     MyString& operator=(MyString&& str) noexcept { // 注意 noexcept
-        cout << "Move Assignment is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
+        if (str._print)
+            cout << "Move Assignment is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
         if (this != &str) {
             if (_data) delete _data;
             _len = str._len;
+            _print = str._print;
             // 一个浅拷贝，没有new新的空间，相当于偷过来了
             _data = str._data; // MOVE!
             str._len = 0;
+            str._print = false;
             // 跟上面的逻辑一样，非常重要
             str._data = NULL; // 避免 delete (in dtor)
         }
@@ -373,9 +382,11 @@ public:
     // dtor
     // 文檔說需 noexcept 但本處無. destructor is noexcept by default.
     virtual ~MyString() {
-        cout << "Destructor is called! " << "source: ";
-        if (_data) cout << _data;
-        cout << " [" << (void*)(_data) << ']' << endl;
+        if (_print) {
+            cout << "Destructor is called! " << "source: ";
+            if (_data) cout << _data;
+            cout << " [" << (void*)(_data) << ']' << endl;
+        }
 
         // 只要当指针不是NULL的时候才delete，做一个doublecheck
         // 与上面的设计配套，保证没问题
@@ -383,6 +394,10 @@ public:
             delete _data;
         }
     }
+
+    void test() { _init_data(NULL); }
+
+    void print() { cout << "data is " << _data << endl; }
 };
 
 void test301_move_semantics_with_noexcept()
@@ -420,7 +435,7 @@ void test301_move_semantics_with_noexcept()
     // cout << "after push 4 elements, vector capacity is " << vec.capacity() << endl;
 
     for (auto& v : vec) {
-        cout << "data is " << v._data << endl;
+        v.print();
     }
 
     // 以上十分好：
@@ -457,10 +472,10 @@ void test_moveable(Container& cntr, long times, RV option)
         // 在container的最后insert数据
         auto itr = cntr.end();
         if (Rvalue == option) {
-            cntr.insert(itr, ElemType3(buf)); // 临时对象
+            cntr.insert(itr, ElemType3(buf, false)); // 临时对象
         }
         else {
-            ElemType3 elem(buf);
+            ElemType3 elem(buf, false);
             cntr.insert(itr, elem);
         }
     }
@@ -500,8 +515,10 @@ void test301_moveable_decltype()
     cout << "test301_moveable_decltype()..........";
     cout << "\n----------------------------------------------------------\n";
 
-    MyString str("Hello world!");
-    std::vector<MyString> vec_MyS(10);
+    MyString str("Hello world!", true);
+    // 这里的原因同样必须给一个初始化对象，不然会报segment fault
+    // 与test301_move_with_nonmove里的原因一致
+    std::vector<MyString> vec_MyS(10, str);
     vec_MyS.push_back(str);
 
     get_type_using_decltype(vec_MyS);
@@ -514,7 +531,7 @@ void test301_move_with_nonmove()
     cout << "test301_move_with_nonmove()..........";
     cout << "\n----------------------------------------------------------\n";
 
-    MyString str("Hello world!");
+    MyString str("Hello world!", false);
     // cout << str << endl; // 没有重载cout
     int container_size = 50000;
     {
@@ -523,17 +540,21 @@ void test301_move_with_nonmove()
         cout << "-------------------------------------------" << endl;
 
         cout << "\nvector test..." << endl;
-        std::vector<MyString> vec_MyS(container_size);
+        // 注意：这里必须给一个初始化对象，不然会调用默认ctor
+        // 后面push_back/insert时调用move/copy ctor相当于给_init_data赋值NULL
+        // 会导致segment fault
+        // str.test();
+        std::vector<MyString> vec_MyS(container_size, str);
         test_moveable(vec_MyS, TIMES, Rvalue);
         cout << "container size = " << vec_MyS.size() << endl;
 
         cout << "\nlist test..." << endl;
-        std::list<MyString> lst_MyS(container_size);
+        std::list<MyString> lst_MyS(container_size, str);
         test_moveable(lst_MyS, TIMES, Rvalue);
         cout << "container size = " << lst_MyS.size() << endl;
 
         cout << "\ndeque test..." << endl;
-        std::vector<MyString> deq_MyS(container_size);
+        std::vector<MyString> deq_MyS(container_size, str);
         test_moveable(deq_MyS, TIMES, Rvalue);
         cout << "container size = " << deq_MyS.size() << endl;
     }
@@ -544,17 +565,17 @@ void test301_move_with_nonmove()
         cout << "-------------------------------------------" << endl;
 
         cout << "\nvector test..." << endl;
-        std::vector<MyString> vec_MyS(container_size);
+        std::vector<MyString> vec_MyS(container_size, str);
         test_moveable(vec_MyS, TIMES, Lvalue);
         cout << "container size = " << vec_MyS.size() << endl;
 
         cout << "\nlist test..." << endl;
-        std::list<MyString> lst_MyS(container_size);
+        std::list<MyString> lst_MyS(container_size, str);
         test_moveable(lst_MyS, TIMES, Lvalue);
         cout << "container size = " << lst_MyS.size() << endl;
 
         cout << "\ndeque test..." << endl;
-        std::vector<MyString> deq_MyS(container_size);
+        std::vector<MyString> deq_MyS(container_size, str);
         test_moveable(deq_MyS, TIMES, Lvalue);
         cout << "container size = " << deq_MyS.size() << endl;
     }
@@ -851,9 +872,9 @@ int main(int argc, char** argv)
 
     jj301::test301_move_semantics_with_noexcept();
 
-    // jj301::test301_move_with_nonmove();
+    jj301::test301_move_with_nonmove();
 
-    // jj301::test301_moveable_decltype(); // 一个小测试学习decltype的，内含在test301_move_with_nonmove里了
+    jj301::test301_moveable_decltype(); // 一个小测试学习decltype的，内含在test301_move_with_nonmove里了
 
     jj06::test06_lambda();
 
