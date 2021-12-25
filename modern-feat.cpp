@@ -18,58 +18,49 @@ using namespace std;
 //----------------------------------------------------
 // Variadic Templates
 //----------------------------------------------------
-namespace jj15
-{
+namespace jj15 {
 // 这里的内容包含了最开始和专门针对variadic template来讲的两块内容
 
 //~~~~~~~~~~~~~~~
 // case4
 // recursive function calling.
-namespace case4
-{
+namespace case4 {
 // 这个是作为stopping criterion，非常重要！
 // 用来在recursive call的最后一轮用的
-void printX()
-{
-}
+void printX() {}
 
 template <typename T, typename... Types>
 void printX(const T& firstArg, const Types&... args)
 {
     // 实际使用的时候需要保证可以cout
-    cout << firstArg << endl; // print first argument
-    printX(args...);          // recursive call for remaining arguments
+    cout << firstArg << endl;  // print first argument
+    printX(args...);           // recursive call for remaining arguments
 }
 
-}
+}  // namespace case4
 
 //~~~~~~~~~~~~~~~
 // case3
 // 用variadic template重写printf
-namespace case3
-{
+namespace case3 {
 // http://stackoverflow.com/questions/3634379/variadic-templates
 // 最后一个和一堆都没了，就只剩最开始的字符串
-void printf(const char *s)
+void printf(const char* s)
 {
     // 这个是stopping criterion
     // 模拟c的print方法，发现数量不匹配，输出错误
-    while (*s)
-    {
-        if (*s == '%' && *(++s) != '%')
-            throw std::runtime_error("invalid format string: missing arguments");
-        std::cout << *s++ << "~end~"; // 打印空格和换行符
+    while (*s) {
+        if (*s == '%' && *(++s) != '%') throw std::runtime_error("invalid format string: missing arguments");
+        std::cout << *s++ << "~end~";  // 打印空格和换行符
     }
     std::cout << std::endl;
 }
 
-template<typename T, typename... Args>
+template <typename T, typename... Args>
 void printf(const char* s, T value, Args... args)
 {
-    while (*s)
-    {
-        if (*s == '%' && *(++s) != '%')
-        {
+    while (*s) {
+        if (*s == '%' && *(++s) != '%') {
             std::cout << value;
             // 用++s的原因是后面有个空格需要跳过
             printf(++s, args...);
@@ -81,100 +72,86 @@ void printf(const char* s, T value, Args... args)
     throw std::logic_error("extra arguments provided to printf");
 }
 
-}
+}  // namespace case3
 
 //~~~~~~~~~~~~~~~
 // case1
 // 检测数据里最大的（initializer_list实现）
-namespace case1
-{
+namespace case1 {
 // ...\4.9.2\include\c++\bits\predefined_oops.h
 // 最终比大小用到的仿函数
-struct _Iter_less_iter
-{
+struct _Iter_less_iter {
     // 本质是一个仿函数，做一个比较
-    template<typename _Iterator1, typename _Iterator2>
-        bool
-        operator()(_Iterator1 __it1, _Iterator2 __it2) const
-        { return *__it1 < *__it2; }
+    template <typename _Iterator1, typename _Iterator2>
+    bool operator()(_Iterator1 __it1, _Iterator2 __it2) const
+    {
+        return *__it1 < *__it2;
+    }
 };
 
 // 生成仿函数的对象，用在下下个代码块里
-inline _Iter_less_iter
-__iter_less_iter()
-{ return _Iter_less_iter(); }
+inline _Iter_less_iter __iter_less_iter() { return _Iter_less_iter(); }
 
 // 具体的实现，如何与所有的值做比较，存下来最大的那个
 // ...\4.9.2\include\c++\bits\stl_algo.h
-template<typename _ForwardIterator, typename _Compare>
-    _ForwardIterator
-    __max_element(_ForwardIterator __first, _ForwardIterator __last,
-                  _Compare __comp)
-    {
-        if (__first == __last) return __first;
-        _ForwardIterator __result = __first;
-        // 很经典的比大小存下来最大的
-        while (++__first != __last) {
-            if (__comp(__result, __first))
-                __result = __first;
-        }
-        return __result;
+template <typename _ForwardIterator, typename _Compare>
+_ForwardIterator __max_element(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp)
+{
+    if (__first == __last) return __first;
+    _ForwardIterator __result = __first;
+    // 很经典的比大小存下来最大的
+    while (++__first != __last) {
+        if (__comp(__result, __first)) __result = __first;
     }
+    return __result;
+}
 
 // initializer_list的max函数的第一层调用实现
-template<typename _ForwardIterator>
-    inline _ForwardIterator
-    max_element(_ForwardIterator __first, _ForwardIterator __last)
-    {
-        return __max_element(__first, __last,
-                             __iter_less_iter());
-    }
+template <typename _ForwardIterator>
+inline _ForwardIterator max_element(_ForwardIterator __first, _ForwardIterator __last)
+{
+    return __max_element(__first, __last, __iter_less_iter());
+}
 
 // 在输入数据阶段{}会自动生成initializer_list，然后调用里面的max函数
-template<typename _Tp>
-    inline _Tp
-    max(initializer_list<_Tp> __l)
-    { return *max_element(__l.begin(), __l.end()); }
-
+template <typename _Tp>
+inline _Tp max(initializer_list<_Tp> __l)
+{
+    return *max_element(__l.begin(), __l.end());
 }
+
+}  // namespace case1
 
 //~~~~~~~~~~~~~~~
 // case2
 // 检测数据里最大的（直接variadic template recursive实现）
-namespace case2
-{
+namespace case2 {
 // http://stackoverflow.com/questions/3634379/variadic-templates
-int maximum(int n)
-{
-    return n;
-}
+int maximum(int n) { return n; }
 
-template<typename... Args>
+template <typename... Args>
 int maximum(int n, Args... args)
 {
     return std::max(n, maximum(args...));
 }
-}
+}  // namespace case2
 
 //~~~~~~~~~~~~~~~
 // case5
 // 以非一般的方式处理第一个和最后一个元素
 // refer to test07_tuples()
 
-
 //~~~~~~~~~~~~~~~
 // case6
 // recursive inheritance
-namespace case6
-{
+namespace case6 {
 
 }
 
 //~~~~~~~~~~~~~~~
 // case7
 // recursive composition
-namespace case7
-{
+namespace case7 {
 
 }
 
@@ -189,28 +166,26 @@ void test15_variadic_template()
     cout << "\n.....case4..........\n";
     case4::printX(7.5, "hello", bitset<16>(377), 42);
 
-    //case3
+    // case3
     cout << "\n.....case3..........\n";
-	int* pi = new int; // 只是为了打印多样性
-    // 15 This is Ace. 0x7fb5aa403430 3.14159
-	case3::printf("%d %s %p %f \n", 15, "This is Ace.", pi, 3.141592653);
+    int* pi = new int;  // 只是为了打印多样性
+                        // 15 This is Ace. 0x7fb5aa403430 3.14159
+    case3::printf("%d %s %p %f \n", 15, "This is Ace.", pi, 3.141592653);
 
     // case1
     cout << "\n.....case1..........\n";
-    cout << case1::max( { 57, 48, 60, 100, 20, 18} ) << endl; //100
+    cout << case1::max({57, 48, 60, 100, 20, 18}) << endl;  // 100
 
     // case2
     cout << "\n.....case2..........\n";
-	cout << case2::maximum(57, 48, 60, 100, 20, 18) << endl; // 100
+    cout << case2::maximum(57, 48, 60, 100, 20, 18) << endl;  // 100
 }
-}
-
+}  // namespace jj15
 
 //----------------------------------------------------
 // Type Alias
 //----------------------------------------------------
-namespace jj48
-{
+namespace jj48 {
 //-----------
 // http://en.cppreference.com/w/cpp/language/type_alias
 // 本质上和typedef是一样的
@@ -219,7 +194,7 @@ namespace jj48
 // typedef void (*func)(int, int);
 // 但是上面的写法看起来不太明显，func是一个类型
 // 下面这样写就比较清楚了
-using func = void (*) (int,int);
+using func = void (*)(int, int);
 
 // 使用时只要赋给一个函数名称即可，本质是一个函数指针
 // 下面创建了对象
@@ -227,9 +202,9 @@ void example(int, int) {}
 func fn = example;
 
 //-----------
-// 
+//
 // 下面两种写法是一样的
-// template <class CharT> using mystring = 
+// template <class CharT> using mystring =
 //     std::basic_string<CharT, std::char_traits<CharT>>;
 template <class CharT>
 using mystring = std::basic_string<CharT, std::char_traits<CharT>>;
@@ -242,14 +217,14 @@ mystring<char> str;
 //-----------
 // 模板类里也可以用这个
 // type alias can introduce a member typedef name
-template<typename T>
+template <typename T>
 // 把struct当做class来看
 struct Container {
     // 相当于这个类里有一个成员叫做value_type
-    using value_type = T; // same as typedef T value_type;
+    using value_type = T;  // same as typedef T value_type;
 };
 // which can be used in generic programming
-template<typename Container>
+template <typename Container>
 void fn2(const Container& c)
 {
     // 强行告诉C++下面这个是类型，不是变量
@@ -259,7 +234,7 @@ void fn2(const Container& c)
 
     // 下面是我自己写的，会用到隐式类型转换
     // TODO: 这里对于实际的用处不理解？猜测可以用创建的对象去执行后续操作
-    typename Container::value_type n = 1; // n = 1.5
+    typename Container::value_type n = 1;  // n = 1.5
     cout << "value is " << n << endl;
 }
 
@@ -271,16 +246,14 @@ void test48_type_alias()
     cout << "\n----------------------------------------------------------\n";
 
     Container<int> c;
-    fn2(c); // Container::value_type will be int in this function
+    fn2(c);  // Container::value_type will be int in this function
 }
-}
-
+}  // namespace jj48
 
 //----------------------------------------------------
 // Move Semantics with Noexcept
 //----------------------------------------------------
-namespace jj301
-{
+namespace jj301 {
 // http://www.ibm.com/developerworks/cn/aix/library/1307_lisl_c11/
 // http://stackoverflow.com/questions/8001823/how-to-enforce-move-semantics-when-a-vector-grows
 
@@ -299,26 +272,27 @@ private:
     char* _data;
     size_t _len;
     bool _print;
-    void _init_data(const char *s) {
-        _data = new char[_len+1];
+    void _init_data(const char* s)
+    {
+        _data = new char[_len + 1];
         memcpy(_data, s, _len);
-        _data[_len] = '\0'; // 最后都以这个结尾
+        _data[_len] = '\0';  // 最后都以这个结尾
     }
+
 public:
     // default ctor
-    MyString(bool print = true) : _data(NULL), _len(0), _print(print) { }
+    MyString(bool print = true) : _data(NULL), _len(0), _print(print) {}
 
     // ctor
-    MyString(const char* p, bool print = true) : _len(strlen(p)), _print(print) {
-        _init_data(p);
-    }
+    MyString(const char* p, bool print = true) : _len(strlen(p)), _print(print) { _init_data(p); }
 
     // copy ctor
-    MyString(const MyString& str) : _len(str._len), _print(str._print) {
+    MyString(const MyString& str) : _len(str._len), _print(str._print)
+    {
         // print内存位置，主要是为了看在析构时哪里的内存被释放了
         if (_print)
             cout << "Copy Constructor is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
-        _init_data(str._data); 	// COPY!
+        _init_data(str._data);  // COPY!
     }
 
     // move ctor, with "noexcept"
@@ -327,7 +301,8 @@ public:
     // 这里两个指针指向同一个地址，后面一定要把其中一个打断
     // 注意：这里对于str._data进行std::move是没有意义的，因为move只是申明这个object后面
     // 可能会被偷，在实际赋值时直接让指针改变指向实现，因此对于指针进行move是没有意义的！
-    MyString(MyString&& str) noexcept : _data(str._data), _len(str._len), _print(str._print) {
+    MyString(MyString&& str) noexcept : _data(str._data), _len(str._len), _print(str._print)
+    {
         if (_print)
             cout << "Move Constructor is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
         // 这里的数据复制在上面一行里了，下面只是防止两个指针指向同一个位置，需要删除
@@ -336,11 +311,12 @@ public:
         str._print = false;
         // 这一行特别重要，如果没有的话，临时对象析构的时候会自动把数据删掉
         // 不然会报pointer being freed was not allocated
-        str._data = NULL; // 避免 delete (in dtor)
+        str._data = NULL;  // 避免 delete (in dtor)
     }
 
     // copy assignment
-    MyString& operator=(const MyString& str) {
+    MyString& operator=(const MyString& str)
+    {
         if (str._print)
             cout << "Copy Assignment is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
         // 判断是否是给自己拷贝赋值
@@ -352,7 +328,7 @@ public:
             if (_data) delete _data;
             _len = str._len;
             _print = str._print;
-            _init_data(str._data); // COPY!
+            _init_data(str._data);  // COPY!
         }
         // 自己赋值的话直接跳过就好
         else {
@@ -362,7 +338,8 @@ public:
     }
 
     // move assignment
-    MyString& operator=(MyString&& str) noexcept { // 注意 noexcept
+    MyString& operator=(MyString&& str) noexcept
+    {  // 注意 noexcept
         if (str._print)
             cout << "Move Assignment is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
         if (this != &str) {
@@ -370,20 +347,22 @@ public:
             _len = str._len;
             _print = str._print;
             // 一个浅拷贝，没有new新的空间，相当于偷过来了
-            _data = str._data; // MOVE!
+            _data = str._data;  // MOVE!
             str._len = 0;
             str._print = false;
             // 跟上面的逻辑一样，非常重要
-            str._data = NULL; // 避免 delete (in dtor)
+            str._data = NULL;  // 避免 delete (in dtor)
         }
         return *this;
     }
 
     // dtor
     // 文檔說需 noexcept 但本處無. destructor is noexcept by default.
-    virtual ~MyString() {
+    virtual ~MyString()
+    {
         if (_print) {
-            cout << "Destructor is called! " << "source: ";
+            cout << "Destructor is called! "
+                 << "source: ";
             if (_data) cout << _data;
             cout << " [" << (void*)(_data) << ']' << endl;
         }
@@ -439,8 +418,8 @@ void test301_move_semantics_with_noexcept()
     }
 
     // 以上十分好：
-	//  1, 以 temp obj.放入容器，編譯器知道那是個 Rvalue, 於是呼叫 move ctor 而非 copy ctor.
-	//  2, 當 push_back() 引發 vector 擴展，擴展過程中使用 move 而非 copy.
+    //  1, 以 temp obj.放入容器，編譯器知道那是個 Rvalue, 於是呼叫 move ctor 而非 copy ctor.
+    //  2, 當 push_back() 引發 vector 擴展，擴展過程中使用 move 而非 copy.
     cout << "vec.clear() ------- \n";
     vec.clear();
 
@@ -449,7 +428,7 @@ void test301_move_semantics_with_noexcept()
 
 enum RV { Rvalue, Lvalue };
 
-template<typename Container>
+template <typename Container>
 void test_moveable(Container& cntr, long times, RV option)
 {
     // 下面三个是一样的
@@ -461,29 +440,27 @@ void test_moveable(Container& cntr, long times, RV option)
     auto foo = *(cntr.begin());
     using ElemType3 = decltype(foo);
 
-
     char buf[10];
 
     clock_t timeStart = clock();
-    for (long i=0; i<times; ++i) {
+    for (long i = 0; i < times; ++i) {
         // 拼接随机数变成string，赋值到buf里，每个元素一个数字，可能不满
-        snprintf(buf, 10, "%d", rand()); // 随机数
+        snprintf(buf, 10, "%d", rand());  // 随机数
         // cout << buf[8] << endl;
         // 在container的最后insert数据
         auto itr = cntr.end();
         if (Rvalue == option) {
-            cntr.insert(itr, ElemType3(buf, false)); // 临时对象
-        }
-        else {
+            cntr.insert(itr, ElemType3(buf, false));  // 临时对象
+        } else {
             ElemType3 elem(buf, false);
             cntr.insert(itr, elem);
         }
     }
-    cout << "milli-seconds: " << (clock()-timeStart) << endl;
+    cout << "milli-seconds: " << (clock() - timeStart) << endl;
 }
 
 // 验证是否可以通过decltype来获得元素类型
-template<typename Container>
+template <typename Container>
 void get_type_using_decltype(Container& cntr)
 {
     // 获得Iterator，并*得到元素
@@ -524,7 +501,7 @@ void test301_moveable_decltype()
     get_type_using_decltype(vec_MyS);
 }
 
-# define TIMES 100000L
+#define TIMES 100000L
 void test301_move_with_nonmove()
 {
     cout << "\n----------------------------------------------------------\n";
@@ -581,21 +558,17 @@ void test301_move_with_nonmove()
     }
 }
 
-}
-
+}  // namespace jj301
 
 //----------------------------------------------------
 // Lambda
 //----------------------------------------------------
-namespace jj06
-{
+namespace jj06 {
 // TODO: function是啥？
 // 其实可以用另一个写法来实现一样的功能
-function<int(int, int)> returnLambda ()
+function<int(int, int)> returnLambda()
 {
-    return [] (int x, int y) {
-        return x*y;
-    };
+    return [](int x, int y) { return x * y; };
 }
 
 void test06_lambda()
@@ -606,7 +579,7 @@ void test06_lambda()
 
     auto lf = returnLambda();
     // lf()创建了lambda的对象
-    cout << lf(9,8) << endl;  //72
+    cout << lf(9, 8) << endl;  // 72
 
     // TODO: 这里没看明白在干啥？？
     // //[Error] no matching function for call to 'std::function<int(int, int)>::function(int, int)'
@@ -622,23 +595,23 @@ void test06_lambda()
         static int x = 5;
         int y = 6;
         return x;
-    } (); // 这里()直接创建对象，就print了，一般很少这样写
+    }();  // 这里()直接创建对象，就print了，一般很少这样写
 
     {
         int id = 0;
         // id是外部变量，取值
         // 若無 mutable ==> [Error] increment of read-only variable 'id'
         // id 變化不影響 outer scope (除非傳入的是 reference)
-        auto f = [id] () mutable {
+        auto f = [id]() mutable {
             cout << "id: " << id << endl;
             ++id;
         };
         // 这个实验挺有趣
         id = 42;
-        f(); //id: 0
-        f(); //id: 1
-        f(); //id: 2
-        cout << id << endl; // 42，没改合理
+        f();                 // id: 0
+        f();                 // id: 1
+        f();                 // id: 2
+        cout << id << endl;  // 42，没改合理
 
         // TODO: 我是想創建一個 lambda 的 temp obj (then invoke it's default ctor,
         // but you know that lambda have no ctor or assignment operator.
@@ -652,41 +625,32 @@ void test06_lambda()
     {
         int id = 0;
         // id是外部变量，取reference
-        auto f = [&id] (int param) {
+        auto f = [&id](int param) {
             cout << "id: " << id << endl;
-            ++id; // 沒有 mutable 也能 ++
-            ++param; // 和 mutable 無關
+            ++id;     // 沒有 mutable 也能 ++
+            ++param;  // 和 mutable 無關
         };
         id = 42;
-        f(7); //id: 42，因为reference不会创建新的，f()在id=42后面，所以已经变了
-        f(7); //id: 43
-        f(7); //id: 44
-        cout << id << endl; // 45，改了合理
+        f(7);                // id: 42，因为reference不会创建新的，f()在id=42后面，所以已经变了
+        f(7);                // id: 43
+        f(7);                // id: 44
+        cout << id << endl;  // 45，改了合理
     }
 
     // 给一个条件，大于30小于100拿掉
-    vector<int> vi {5,28,50,83,70,590,245,59,24};
+    vector<int> vi{5, 28, 50, 83, 70, 590, 245, 59, 24};
     int x = 30;
     int y = 100;
-    vi.erase(remove_if(vi.begin(),
-                       vi.end(),
-                       [x, y](int n) { return x<n && n<y; }
-                       ),
-             vi.end()
-            );
-    for (auto i : vi)
-        cout << i << ' '; //5 28 590 245 24
+    vi.erase(remove_if(vi.begin(), vi.end(), [x, y](int n) { return x < n && n < y; }), vi.end());
+    for (auto i : vi) cout << i << ' ';  // 5 28 590 245 24
     cout << endl;
-
 }
-}
-
+}  // namespace jj06
 
 //----------------------------------------------------
 // Rvalue Move
 //----------------------------------------------------
-namespace jj12
-{
+namespace jj12 {
 void test12_Rvalue_Move()
 {
     cout << "\n----------------------------------------------------------\n";
@@ -697,23 +661,23 @@ void test12_Rvalue_Move()
     string s2("bbbb");
     string s = s1 + s2;
 
-    cout << "s: "  << s  << endl; // aaaabbbb
-    cout << "s1: " << s1 << endl; // aaaa
-    cout << "s2: " << s2 << endl; // bbbb
+    cout << "s: " << s << endl;    // aaaabbbb
+    cout << "s1: " << s1 << endl;  // aaaa
+    cout << "s2: " << s2 << endl;  // bbbb
 
     s = move(s1);
-    cout << "s: "  << s  << endl; // aaaabbbb
+    cout << "s: " << s << endl;  // aaaabbbb
     cout << "s1: " << s1 << endl;
 
     s = move(s2);
-    cout << "s: "  << s  << endl; // aaaabbbb
+    cout << "s: " << s << endl;  // aaaabbbb
     cout << "s2: " << s2 << endl;
 
     // TODO: 普通情况下用了Move都是后面不能用了，但是在相加时却不是？
     s = move(s1) + move(s2);
-    cout << "s: "  << s  << endl; // aaaabbbb
-    cout << "s1: " << s1 << endl; //
-    cout << "s2: " << s2 << endl; // bbbb
+    cout << "s: " << s << endl;    // aaaabbbb
+    cout << "s1: " << s1 << endl;  //
+    cout << "s2: " << s2 << endl;  // bbbb
 
     //----------------
 
@@ -725,26 +689,24 @@ void test12_Rvalue_Move()
 
     s1 = "Hello ";
     // 这里也没理解是啥逻辑？
-    s1 + s2 = s2; // 竟然可以通過編譯，作者自己违反了规则
-    cout << "s1: " << s1 << endl;	// s1: Hello
-    cout << "s2: " << s2 << endl;	// s2: bbbb
-    string() = "World"; // 對 temp obj 賦值可以，作者自己违反了规则
+    s1 + s2 = s2;                  // 竟然可以通過編譯，作者自己违反了规则
+    cout << "s1: " << s1 << endl;  // s1: Hello
+    cout << "s2: " << s2 << endl;  // s2: bbbb
+    string() = "World";            // 對 temp obj 賦值可以，作者自己违反了规则
 
-    complex<int> c1(2,3), c2(4,5);
-    c1 + c2 = complex<int>(6,9); // 感觉没用？？
-    cout << "c1: " << c1 << endl;	// c1: (2,3)
-    cout << "c2: " << c2 << endl;	// c2: (4,5)
-    complex<int>() = complex<int>(6,9);	// 對 temp obj 賦值可以，作者自己违反了规则
+    complex<int> c1(2, 3), c2(4, 5);
+    c1 + c2 = complex<int>(6, 9);         // 感觉没用？？
+    cout << "c1: " << c1 << endl;         // c1: (2,3)
+    cout << "c2: " << c2 << endl;         // c2: (4,5)
+    complex<int>() = complex<int>(6, 9);  // 對 temp obj 賦值可以，作者自己违反了规则
 }
 
-}
-
+}  // namespace jj12
 
 //----------------------------------------------------
 // Hash
 //----------------------------------------------------
-namespace jj50
-{
+namespace jj50 {
 void test50_hash()
 {
     cout << "\n----------------------------------------------------------\n";
@@ -754,37 +716,29 @@ void test50_hash()
     void* pi = (void*)(new int(100));
     cout << hash<void*>()(pi) << endl;
     // 第一个()是创建对象，第二个()是输入函数参数
-    cout << hash<int>()(123) << endl; // 123
-    cout << hash<long>()(123L) << endl; // 123
+    cout << hash<int>()(123) << endl;    // 123
+    cout << hash<long>()(123L) << endl;  // 123
     cout << hash<string>()(string("ssss")) << endl;
     cout << hash<const char*>()("sss") << endl;
-    cout << hash<char>()('s') << endl; // ASIC码, 115
-    cout << hash<float>()(3.1415) << endl; // 1078529622，没有定义不知道怎么算得
-    cout << hash<double>()(3.1415) << endl; // 4614256447914709615，没有定义不知道怎么算得
+    cout << hash<char>()('s') << endl;       // ASIC码, 115
+    cout << hash<float>()(3.1415) << endl;   // 1078529622，没有定义不知道怎么算得
+    cout << hash<double>()(3.1415) << endl;  // 4614256447914709615，没有定义不知道怎么算得
 }
 
-}
-
+}  // namespace jj50
 
 //----------------------------------------------------
 // Push_back vs Emplace_back
 //----------------------------------------------------
-namespace yj01
-{
+namespace yj01 {
 // TODO: emplace_back输入是universal reference，所以再用std::move处理输入即用rvalue
 // push_back有两种重载函数，右值输入内部直接调用到emplace_back函数
 // emplace_back输入数据后面可以用，只是内部会操作
-class President
-{
+class President {
 public:
-    President(string p_name, int p_year) : name(p_name), year(p_year)
-    {
-        cout << "ctor is called" << endl;
-    }
+    President(string p_name, int p_year) : name(p_name), year(p_year) { cout << "ctor is called" << endl; }
 
-    President(const President& other) : name(other.name), year(other.year) {
-        cout << "copy ctor is called" << endl;
-    }
+    President(const President& other) : name(other.name), year(other.year) { cout << "copy ctor is called" << endl; }
 
     // 注意：只有在使用noexcept的时候，vector扩展才会调用move ctor
     // 但是与是否使用std::move无关，move了后面就用不了
@@ -797,10 +751,7 @@ public:
 
     President& operator=(const President& other) = default;
 
-    void print()
-    {
-        cout << "name is " << name << ", year is " << year << endl;
-    }
+    void print() { cout << "name is " << name << ", year is " << year << endl; }
 
 private:
     string name;
@@ -850,19 +801,19 @@ void test01_emplace_back()
     // TODO: 结果是每个都少了一次move ctor，好像还是有点提升的，具体以后再看看
     elections1.emplace_back("Franklin", 1936);
     cout << ".." << endl;
-    elections1.emplace_back("Nelson",   1994);
+    elections1.emplace_back("Nelson", 1994);
     cout << ".." << endl;
-    elections1.emplace_back("Billy",    2030);
+    elections1.emplace_back("Billy", 2030);
     cout << ".." << endl;
-    elections1.emplace_back("Patty",    2050);
+    elections1.emplace_back("Patty", 2050);
 
     for (auto& p : elections1) p.print();
 }
 
-}
+}  // namespace yj01
 
 //---------------------------------------------------
-int main(int argc, char** argv) 
+int main(int argc, char** argv)
 {
     cout << "c++ version " << __cplusplus << endl;
 
@@ -874,7 +825,7 @@ int main(int argc, char** argv)
 
     jj301::test301_move_with_nonmove();
 
-    jj301::test301_moveable_decltype(); // 一个小测试学习decltype的，内含在test301_move_with_nonmove里了
+    jj301::test301_moveable_decltype();  // 一个小测试学习decltype的，内含在test301_move_with_nonmove里了
 
     jj06::test06_lambda();
 
