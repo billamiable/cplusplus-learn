@@ -6,6 +6,7 @@
 #include <vector>
 #include <list>
 #include <deque>
+// 注意下面两个没关系，string是针对字符串，cstring/string.h是针对字符数组
 #include <string>
 #include <cstring>
 #include <bitset>
