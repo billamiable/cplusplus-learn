@@ -459,6 +459,70 @@ void test02_observer()
 
 }  // namespace dp02
 
+//----------------------------------------------------
+// Design Pattern: Composite
+//----------------------------------------------------
+namespace dp03 {
+class Component  // lowest common
+{
+public:
+    // 父类定义一个子类都可以用的纯虚函数
+    virtual void traverse() = 0;
+};
+
+class Leaf : public Component {
+private:
+    int value;
+
+public:
+    Leaf(int val) : value(val) {}
+    // 针对不同的结构输出不同的结果
+    void traverse() { cout << value << " "; }
+};
+
+class Composite : public Component {
+private:
+    // 注意使用的是父类的指针，指向子类的对象
+    // 因此这里既可以是Leaf，又可以是Composite
+    vector<Component*> children;
+
+public:
+    void add(Component* ele) { children.push_back(ele); }
+    void traverse()
+    {
+        int size = children.size();
+        for (int i = 0; i < size; ++i) {
+            children[i]->traverse();
+        }
+    }
+};
+void test03_composite()
+{
+    cout << "\n----------------------------------------------------------\n";
+    cout << "test03_composite()..........";
+    cout << "\n----------------------------------------------------------\n";
+
+    Composite containers[4];
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            containers[i].add(new Leaf(i * 3 + j));
+        }
+    }
+
+    // 这里相当于把第2-4个container的内容拷贝一份在第1个container下面
+    // 体现出一种composite特性，即leaf下面可以再有一个
+    for (int i = 1; i < 4; ++i) {
+        containers[0].add(&(containers[i]));
+    }
+
+    // traverse并print结果
+    for (int i = 0; i < 4; ++i) {
+        containers[i].traverse();
+        cout << endl;
+    }
+}
+}  // namespace dp03
+
 int main(int argc, char** argv)
 {
     cout << "c++ version " << __cplusplus << endl;
@@ -472,4 +536,6 @@ int main(int argc, char** argv)
     jj08::test08_any_reimplementation();
 
     dp02::test02_observer();
+
+    dp03::test03_composite();
 }
