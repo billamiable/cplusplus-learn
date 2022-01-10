@@ -14,7 +14,91 @@
 #include <complex>
 #include <ctime>
 #include <algorithm>
+#include <initializer_list>
 using namespace std;
+
+//----------------------------------------------------
+// Initializer List
+//----------------------------------------------------
+namespace jj03 {
+class P {
+public:
+    P(int a, int b) { cout << "P(int, int), a=" << a << ", b=" << b << endl; }
+
+    P(initializer_list<int> initlist)
+    {
+        cout << "P(initializer_list<int>), values= ";
+        for (auto i : initlist) cout << i << ' ';
+        cout << endl;
+    }
+};
+
+void print(initializer_list<int> vals)
+{
+    for (auto p = vals.begin(); p != vals.end(); ++p) {
+        cout << *p << " ";
+    }
+    cout << endl;
+}
+
+void test03_initializer_list()
+{
+    cout << "\n----------------------------------------------------------\n";
+    cout << "test03_initializer_list()..................";
+    cout << "\n----------------------------------------------------------\n";
+
+    print({12, 3, 6, 8});
+
+    // initializer lists
+    int i;                                                  // i has undefined value, default is 0
+    int j{};                                                // j is initialized by 0
+    int* p;                                                 // p has undefined value, default is nullptr
+    int* q{};                                               // q is initialized by nullptr
+    cout << i << " " << j << " " << p << " " << q << endl;  // 0  0  0  0
+
+    int x1(5.3);
+    int x2 = 5.3;
+
+    //! int x3{5.0};     // ERROR: narrowing
+    //! int x4 = {5.3};  // ERROR: narrowing
+
+    char c1{7};  // OK: even though 7 is an int,this is not narrowing
+    //[Warning] overflow in implicit constant conversion [-Woverflow]
+    //!	char c2{99999};	// ERROR: narrowing
+
+    // cout << x1 << " " << x2 << ' ' << x3 << ' ' << x4 << ' ' << c1 << ' ' << c2 << endl;  	//5 5 5 5
+
+    vector<int> v1{1, 2, 3, 4};
+    //! vector<int> v2{1, 2.1, 3.2, 4.4};  // ERROR: narrowing doubles to ints
+    // for (auto& elem : v2) {
+    //     cout << elem << " ";  // 1 2 3 4
+    // }
+    // cout << endl;
+
+    {
+        P p(77, 5);      // P(int, int), a=77, b=5
+        P q{77, 5};      // P(initializer_list<int>), values= 77 5
+        P r{77, 5, 42};  // P(initializer_list<int>), values= 77 5 42
+        P s = {77, 5};   // P(initializer_list<int>), values= 77 5
+    }
+
+    {
+        vector<int> v1{2, 4, 5, 6};
+        vector<int> v2({2, 6, 7, 8});
+        vector<int> v3;
+        v3 = {4, 5, 6, 7};
+        v3.insert(v3.begin() + 2, {0, 2, 3});
+
+        for (auto i : v3) cout << i << " ";
+        cout << endl;
+
+        cout << max({string("A"), string("Stacy"), string("Sabrina")}) << endl;
+        cout << min({string("A"), string("Stacy"), string("Sabrina")}) << endl;
+        cout << max({54, 23, 2}) << endl;
+        cout << min({54, 23, 2}) << endl;
+    }
+}
+}  // namespace jj03
 
 //----------------------------------------------------
 // Lambda
@@ -817,6 +901,8 @@ void test01_emplace_back()
 int main(int argc, char** argv)
 {
     cout << "c++ version " << __cplusplus << endl;
+
+    jj03::test03_initializer_list();
 
     jj06::test06_lambda();
 
