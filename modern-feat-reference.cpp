@@ -52,7 +52,7 @@ void test00_nullptr()
     // nullptr and std::nullptr_t
     f(0);  // calls f(int)
     //!	f(NULL);	//calls f(int) if NULL is 0, ambiguous otherwise   	//[Warning] passing NULL to non-pointer
-    //!argument 1 of 'void f(int)' [-Wconversion-null]
+    //! argument 1 of 'void f(int)' [-Wconversion-null]
     f(nullptr);  // calls f(void*)
 }
 

@@ -17,6 +17,149 @@
 using namespace std;
 
 //----------------------------------------------------
+// Lambda
+//----------------------------------------------------
+namespace jj06 {
+// TODO: function是啥？
+// 其实可以用另一个写法来实现一样的功能
+function<int(int, int)> returnLambda()
+{
+    return [](int x, int y) { return x * y; };
+}
+
+void test06_lambda()
+{
+    cout << "\n----------------------------------------------------------\n";
+    cout << "test06_lambda()..................";
+    cout << "\n----------------------------------------------------------\n";
+
+    auto lf = returnLambda();
+    // lf()创建了lambda的对象
+    cout << lf(9, 8) << endl;  // 72
+
+    // TODO: 这里没看明白在干啥？？
+    // //[Error] no matching function for call to 'std::function<int(int, int)>::function(int, int)'
+    // ! decltype(lf)(3,5);
+
+    // no-op. 喚起的是 std::function 的 default ctor.
+    // 這不是我要測的. 所以稍後又測一個 -- 那果然就編譯報錯了
+    decltype(lf)();
+
+    // lambda可以创建静态/非静态对象，也可以返回值（需要按照语法规则，编译器具有一定识别能力）
+    [] {
+        cout << "hello lambda" << endl;
+        static int x = 5;
+        int y = 6;
+        return x;
+    }();  // 这里()直接创建对象，就print了，一般很少这样写
+
+    {
+        int id = 0;
+        // id是外部变量，取值
+        // 若無 mutable ==> [Error] increment of read-only variable 'id'
+        // id 變化不影響 outer scope (除非傳入的是 reference)
+        auto f = [id]() mutable {
+            cout << "id: " << id << endl;
+            ++id;
+        };
+        // 这个实验挺有趣
+        id = 42;
+        f();                 // id: 0
+        f();                 // id: 1
+        f();                 // id: 2
+        cout << id << endl;  // 42，没改合理
+
+        // TODO: 我是想創建一個 lambda 的 temp obj (then invoke it's default ctor,
+        // but you know that lambda have no ctor or assignment operator.
+        // [Error] no matching function for call to 'jj06::test06_lambda()::<lambda()>::__lambda9(int, int)'
+        //! decltype(f)(3,5);
+
+        // [Error] use of deleted function 'jj06::test06_lambda()::<lambda()>::<lambda>()'
+        //! decltype(f)();
+    }
+
+    {
+        int id = 0;
+        // id是外部变量，取reference
+        auto f = [&id](int param) {
+            cout << "id: " << id << endl;
+            ++id;     // 沒有 mutable 也能 ++
+            ++param;  // 和 mutable 無關
+        };
+        id = 42;
+        f(7);                // id: 42，因为reference不会创建新的，f()在id=42后面，所以已经变了
+        f(7);                // id: 43
+        f(7);                // id: 44
+        cout << id << endl;  // 45，改了合理
+    }
+
+    // 给一个条件，大于30小于100拿掉
+    vector<int> vi{5, 28, 50, 83, 70, 590, 245, 59, 24};
+    int x = 30;
+    int y = 100;
+    vi.erase(remove_if(vi.begin(), vi.end(), [x, y](int n) { return x < n && n < y; }), vi.end());
+    for (auto i : vi) cout << i << ' ';  // 5 28 590 245 24
+    cout << endl;
+}
+}  // namespace jj06
+
+//----------------------------------------------------
+// Rvalue Move
+//----------------------------------------------------
+namespace jj12 {
+void test12_Rvalue_Move()
+{
+    cout << "\n----------------------------------------------------------\n";
+    cout << "test12_Rvalue_Move()..........";
+    cout << "\n----------------------------------------------------------\n";
+
+    string s1("aaaa");
+    string s2("bbbb");
+    string s = s1 + s2;
+
+    cout << "s: " << s << endl;    // aaaabbbb
+    cout << "s1: " << s1 << endl;  // aaaa
+    cout << "s2: " << s2 << endl;  // bbbb
+
+    s = move(s1);
+    cout << "s: " << s << endl;  // aaaabbbb
+    cout << "s1: " << s1 << endl;
+
+    s = move(s2);
+    cout << "s: " << s << endl;  // aaaabbbb
+    cout << "s2: " << s2 << endl;
+
+    // TODO: 普通情况下用了Move都是后面不能用了，但是在相加时却不是？
+    s = move(s1) + move(s2);
+    cout << "s: " << s << endl;    // aaaabbbb
+    cout << "s1: " << s1 << endl;  //
+    cout << "s2: " << s2 << endl;  // bbbb
+
+    //----------------
+
+    int x = 4;
+    int y = 8;
+    //! x + y = 10; // [Error] lvalue required as left operand of assignment
+
+    //----------------
+
+    s1 = "Hello ";
+    // 这里也没理解是啥逻辑？
+    s1 + s2 = s2;                  // 竟然可以通過編譯，作者自己违反了规则
+    cout << "s1: " << s1 << endl;  // s1: Hello
+    cout << "s2: " << s2 << endl;  // s2: bbbb
+    string() = "World";            // 對 temp obj 賦值可以，作者自己违反了规则
+
+    complex<int> c1(2, 3), c2(4, 5);
+    c1 + c2 = complex<int>(6, 9);         // 感觉没用？？
+    cout << "c1: " << c1 << endl;         // c1: (2,3)
+    cout << "c2: " << c2 << endl;         // c2: (4,5)
+    complex<int>() = complex<int>(6, 9);  // 對 temp obj 賦值可以，作者自己违反了规则
+}
+
+}  // namespace jj12
+
+//----------------------------------------------------
 // Variadic Templates
 //----------------------------------------------------
 namespace jj15 {
@@ -182,74 +325,6 @@ void test15_variadic_template()
     cout << case2::maximum(57, 48, 60, 100, 20, 18) << endl;  // 100
 }
 }  // namespace jj15
-
-//----------------------------------------------------
-// Type Alias
-//----------------------------------------------------
-namespace jj48 {
-//-----------
-// http://en.cppreference.com/w/cpp/language/type_alias
-// 本质上和typedef是一样的
-// 这个看起来很怪，但其实是一个函数名的alias
-// 在C++1.0时写作：
-// typedef void (*func)(int, int);
-// 但是上面的写法看起来不太明显，func是一个类型
-// 下面这样写就比较清楚了
-using func = void (*)(int, int);
-
-// 使用时只要赋给一个函数名称即可，本质是一个函数指针
-// 下面创建了对象
-void example(int, int) {}
-func fn = example;
-
-//-----------
-//
-// 下面两种写法是一样的
-// template <class CharT> using mystring =
-//     std::basic_string<CharT, std::char_traits<CharT>>;
-template <class CharT>
-using mystring = std::basic_string<CharT, std::char_traits<CharT>>;
-// 实际使用时：
-mystring<char> str;
-// 其實在 <string>, <string_fwd.h> 都有以下 typedef
-// typedef basic_string<char>   string;
-// typedef相当于是c++1.0的实现方法，using更高级了
-
-//-----------
-// 模板类里也可以用这个
-// type alias can introduce a member typedef name
-template <typename T>
-// 把struct当做class来看
-struct Container {
-    // 相当于这个类里有一个成员叫做value_type
-    using value_type = T;  // same as typedef T value_type;
-};
-// which can be used in generic programming
-template <typename Container>
-void fn2(const Container& c)
-{
-    // 强行告诉C++下面这个是类型，不是变量
-    // 这样不用等到实例化再来确定是啥类型
-    // 可能是创建了一个n的对象，把typename去掉来看，单纯认为是表明后者是类型
-    // typename Container::value_type n; // 原版
-
-    // 下面是我自己写的，会用到隐式类型转换
-    // TODO: 这里对于实际的用处不理解？猜测可以用创建的对象去执行后续操作
-    typename Container::value_type n = 1;  // n = 1.5
-    cout << "value is " << n << endl;
-}
-
-//-----------
-void test48_type_alias()
-{
-    cout << "\n----------------------------------------------------------\n";
-    cout << "test48_type_alias().......";
-    cout << "\n----------------------------------------------------------\n";
-
-    Container<int> c;
-    fn2(c);  // Container::value_type will be int in this function
-}
-}  // namespace jj48
 
 //----------------------------------------------------
 // Move Semantics with Noexcept
@@ -562,147 +637,72 @@ void test301_move_with_nonmove()
 }  // namespace jj301
 
 //----------------------------------------------------
-// Lambda
+// Type Alias
 //----------------------------------------------------
-namespace jj06 {
-// TODO: function是啥？
-// 其实可以用另一个写法来实现一样的功能
-function<int(int, int)> returnLambda()
+namespace jj48 {
+//-----------
+// http://en.cppreference.com/w/cpp/language/type_alias
+// 本质上和typedef是一样的
+// 这个看起来很怪，但其实是一个函数名的alias
+// 在C++1.0时写作：
+// typedef void (*func)(int, int);
+// 但是上面的写法看起来不太明显，func是一个类型
+// 下面这样写就比较清楚了
+using func = void (*)(int, int);
+
+// 使用时只要赋给一个函数名称即可，本质是一个函数指针
+// 下面创建了对象
+void example(int, int) {}
+func fn = example;
+
+//-----------
+//
+// 下面两种写法是一样的
+// template <class CharT> using mystring =
+//     std::basic_string<CharT, std::char_traits<CharT>>;
+template <class CharT>
+using mystring = std::basic_string<CharT, std::char_traits<CharT>>;
+// 实际使用时：
+mystring<char> str;
+// 其實在 <string>, <string_fwd.h> 都有以下 typedef
+// typedef basic_string<char>   string;
+// typedef相当于是c++1.0的实现方法，using更高级了
+
+//-----------
+// 模板类里也可以用这个
+// type alias can introduce a member typedef name
+template <typename T>
+// 把struct当做class来看
+struct Container {
+    // 相当于这个类里有一个成员叫做value_type
+    using value_type = T;  // same as typedef T value_type;
+};
+// which can be used in generic programming
+template <typename Container>
+void fn2(const Container& c)
 {
-    return [](int x, int y) { return x * y; };
+    // 强行告诉C++下面这个是类型，不是变量
+    // 这样不用等到实例化再来确定是啥类型
+    // 可能是创建了一个n的对象，把typename去掉来看，单纯认为是表明后者是类型
+    // typename Container::value_type n; // 原版
+
+    // 下面是我自己写的，会用到隐式类型转换
+    // TODO: 这里对于实际的用处不理解？猜测可以用创建的对象去执行后续操作
+    typename Container::value_type n = 1;  // n = 1.5
+    cout << "value is " << n << endl;
 }
 
-void test06_lambda()
+//-----------
+void test48_type_alias()
 {
     cout << "\n----------------------------------------------------------\n";
-    cout << "test06_lambda()..................";
+    cout << "test48_type_alias().......";
     cout << "\n----------------------------------------------------------\n";
 
-    auto lf = returnLambda();
-    // lf()创建了lambda的对象
-    cout << lf(9, 8) << endl;  // 72
-
-    // TODO: 这里没看明白在干啥？？
-    // //[Error] no matching function for call to 'std::function<int(int, int)>::function(int, int)'
-    // ! decltype(lf)(3,5);
-
-    // no-op. 喚起的是 std::function 的 default ctor.
-    // 這不是我要測的. 所以稍後又測一個 -- 那果然就編譯報錯了
-    decltype(lf)();
-
-    // lambda可以创建静态/非静态对象，也可以返回值（需要按照语法规则，编译器具有一定识别能力）
-    [] {
-        cout << "hello lambda" << endl;
-        static int x = 5;
-        int y = 6;
-        return x;
-    }();  // 这里()直接创建对象，就print了，一般很少这样写
-
-    {
-        int id = 0;
-        // id是外部变量，取值
-        // 若無 mutable ==> [Error] increment of read-only variable 'id'
-        // id 變化不影響 outer scope (除非傳入的是 reference)
-        auto f = [id]() mutable {
-            cout << "id: " << id << endl;
-            ++id;
-        };
-        // 这个实验挺有趣
-        id = 42;
-        f();                 // id: 0
-        f();                 // id: 1
-        f();                 // id: 2
-        cout << id << endl;  // 42，没改合理
-
-        // TODO: 我是想創建一個 lambda 的 temp obj (then invoke it's default ctor,
-        // but you know that lambda have no ctor or assignment operator.
-        // [Error] no matching function for call to 'jj06::test06_lambda()::<lambda()>::__lambda9(int, int)'
-        //! decltype(f)(3,5);
-
-        // [Error] use of deleted function 'jj06::test06_lambda()::<lambda()>::<lambda>()'
-        //! decltype(f)();
-    }
-
-    {
-        int id = 0;
-        // id是外部变量，取reference
-        auto f = [&id](int param) {
-            cout << "id: " << id << endl;
-            ++id;     // 沒有 mutable 也能 ++
-            ++param;  // 和 mutable 無關
-        };
-        id = 42;
-        f(7);                // id: 42，因为reference不会创建新的，f()在id=42后面，所以已经变了
-        f(7);                // id: 43
-        f(7);                // id: 44
-        cout << id << endl;  // 45，改了合理
-    }
-
-    // 给一个条件，大于30小于100拿掉
-    vector<int> vi{5, 28, 50, 83, 70, 590, 245, 59, 24};
-    int x = 30;
-    int y = 100;
-    vi.erase(remove_if(vi.begin(), vi.end(), [x, y](int n) { return x < n && n < y; }), vi.end());
-    for (auto i : vi) cout << i << ' ';  // 5 28 590 245 24
-    cout << endl;
+    Container<int> c;
+    fn2(c);  // Container::value_type will be int in this function
 }
-}  // namespace jj06
-
-//----------------------------------------------------
-// Rvalue Move
-//----------------------------------------------------
-namespace jj12 {
-void test12_Rvalue_Move()
-{
-    cout << "\n----------------------------------------------------------\n";
-    cout << "test12_Rvalue_Move()..........";
-    cout << "\n----------------------------------------------------------\n";
-
-    string s1("aaaa");
-    string s2("bbbb");
-    string s = s1 + s2;
-
-    cout << "s: " << s << endl;    // aaaabbbb
-    cout << "s1: " << s1 << endl;  // aaaa
-    cout << "s2: " << s2 << endl;  // bbbb
-
-    s = move(s1);
-    cout << "s: " << s << endl;  // aaaabbbb
-    cout << "s1: " << s1 << endl;
-
-    s = move(s2);
-    cout << "s: " << s << endl;  // aaaabbbb
-    cout << "s2: " << s2 << endl;
-
-    // TODO: 普通情况下用了Move都是后面不能用了，但是在相加时却不是？
-    s = move(s1) + move(s2);
-    cout << "s: " << s << endl;    // aaaabbbb
-    cout << "s1: " << s1 << endl;  //
-    cout << "s2: " << s2 << endl;  // bbbb
-
-    //----------------
-
-    int x = 4;
-    int y = 8;
-    //! x + y = 10; // [Error] lvalue required as left operand of assignment
-
-    //----------------
-
-    s1 = "Hello ";
-    // 这里也没理解是啥逻辑？
-    s1 + s2 = s2;                  // 竟然可以通過編譯，作者自己违反了规则
-    cout << "s1: " << s1 << endl;  // s1: Hello
-    cout << "s2: " << s2 << endl;  // s2: bbbb
-    string() = "World";            // 對 temp obj 賦值可以，作者自己违反了规则
-
-    complex<int> c1(2, 3), c2(4, 5);
-    c1 + c2 = complex<int>(6, 9);         // 感觉没用？？
-    cout << "c1: " << c1 << endl;         // c1: (2,3)
-    cout << "c2: " << c2 << endl;         // c2: (4,5)
-    complex<int>() = complex<int>(6, 9);  // 對 temp obj 賦值可以，作者自己违反了规则
-}
-
-}  // namespace jj12
+}  // namespace jj48
 
 //----------------------------------------------------
 // Hash
@@ -818,9 +818,11 @@ int main(int argc, char** argv)
 {
     cout << "c++ version " << __cplusplus << endl;
 
+    jj06::test06_lambda();
+
     jj15::test15_variadic_template();
 
-    jj48::test48_type_alias();
+    jj12::test12_Rvalue_Move();
 
     jj301::test301_move_semantics_with_noexcept();
 
@@ -828,9 +830,7 @@ int main(int argc, char** argv)
 
     jj301::test301_moveable_decltype();  // 一个小测试学习decltype的，内含在test301_move_with_nonmove里了
 
-    jj06::test06_lambda();
-
-    jj12::test12_Rvalue_Move();
+    jj48::test48_type_alias();
 
     jj50::test50_hash();
 
