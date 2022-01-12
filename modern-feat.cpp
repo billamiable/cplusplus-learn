@@ -373,6 +373,28 @@ int maximum(int n, Args... args)
 // case6
 // recursive inheritance
 namespace case6 {
+template <typename... Values>
+class tuple;
+template <>
+class tuple<> {
+};
+
+template <typename Head, typename... Tail>
+class tuple<Head, Tail...> : private tuple<Tail...> {
+    typedef tuple<Tail...> inherited;
+
+public:
+    tuple() {}
+    tuple(Head v, Tail... vtail) : m_head(v), inherited(vtail...) {}
+    Head head() { return m_head; }
+    // TODO: 这里的this如何判断是inherited的？
+    // 可以跟后面的recursive composition对比下，后面是直接return m_tail
+    inherited& tail() { return *this; }
+
+protected:
+    Head m_head;
+};
+
 
 }
 
@@ -407,6 +429,28 @@ void test15_variadic_template()
     // case2
     cout << "\n.....case2..........\n";
     cout << case2::maximum(57, 48, 60, 100, 20, 18) << endl;  // 100
+
+    // case 6
+    case6::tuple<int, float, string> t1(41, 6.3, "nico");
+    cout << sizeof(t1) << endl;
+    cout << t1.head() << endl;
+    cout << t1.tail().head() << endl;
+    cout << t1.tail().tail().head() << endl;
+
+    cout << sizeof(bitset<16>) << endl;
+
+    case6::tuple<string, complex<int>, bitset<16>, double> t2("Ac", complex<int>(3, 8), bitset<16>(37), 3.14);
+    cout << sizeof(t2) << endl;
+    cout << t2.head() << endl;
+    cout << t2.tail().head() << endl;
+    cout << t2.tail().tail().head() << endl;
+    cout << t2.tail().tail().tail().head() << endl;
+
+    case6::tuple<string, complex<int>, double> t3("St", complex<int>(4,9), 1.6);
+    cout << sizeof(t3) << endl;
+    cout << t3.head() << endl;
+    cout << t3.tail().head() << endl;
+    cout << t3.tail().tail().head() << endl;
 }
 }  // namespace jj15
 
