@@ -375,13 +375,16 @@ int maximum(int n, Args... args)
 namespace case6 {
 template <typename... Values>
 class tuple;
+// TODO: 这个看起来像stopping criterion
 template <>
 class tuple<> {
 };
 
+// 分成head一个和tail一包
 template <typename Head, typename... Tail>
+// TODO: 这个继承了tuple<Tail...>不是很能理解？
 class tuple<Head, Tail...> : private tuple<Tail...> {
-    typedef tuple<Tail...> inherited;
+    typedef tuple<Tail...> inherited; // 而且继承的父类变成了inherited?
 
 public:
     tuple() {}
@@ -458,6 +461,13 @@ void test15_variadic_template()
 // Move Semantics with Noexcept
 //----------------------------------------------------
 namespace jj301 {
+// 这里的核心逻辑是针对move的来源端，其实他已经是废物了，后面不会用到了
+// 举个例子，对于string来说，是一个指针指向一块内存
+// 当执行move时，相当于老的指针没用了，但是分配的内存没必要换了
+// 因此直接把新的指针指向这块内存，然后删除老的指针
+
+// TODO： 但是如果涉及到转发，可能是另一个story
+
 // http://www.ibm.com/developerworks/cn/aix/library/1307_lisl_c11/
 // http://stackoverflow.com/questions/8001823/how-to-enforce-move-semantics-when-a-vector-grows
 
@@ -513,8 +523,11 @@ public:
         // TODO: 为何还要改成default value？感觉这个没影响，可能就是习惯比较好
         str._len = 0;
         str._print = false;
-        // 这一行特别重要，如果没有的话，临时对象析构的时候会自动把数据删掉
-        // 不然会报pointer being freed was not allocated
+        // 这一行特别重要，首先很好理解，对于move语义就是应该把老的指针删去
+        // 如果不这么做，其实就是典型的多个指针指向同一块内存，从而引发多次释放的问题（double free）
+        // 在这里具体的体现是，输入的str是一个临时对象，在这个函数调用结束后会做析构，那就自动把数据删掉了！
+        // 不然会报pointer being freed was not allocated，释放的c++指针没有分配（在程序最后释放另一个指针时报错）
+        // 或者直接报错double free，这样就很明显了
         str._data = NULL;  // 避免 delete (in dtor)
     }
 
