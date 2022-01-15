@@ -979,6 +979,153 @@ void test01_emplace_back()
 
 }  // namespace yj01
 
+//----------------------------------------------------
+// Move Constructor
+//----------------------------------------------------
+namespace yj02 {
+
+class MyObject {
+private:
+    char* _data;
+    size_t _len;
+    string _str;
+
+    void _init_data(const char* s)
+    {
+        _data = new char[_len + 1];
+        memcpy(_data, s, _len);
+        _data[_len] = '\0';  // 最后都以这个结尾
+    }
+
+public:
+    // default ctor
+    MyObject() : _data(NULL), _len(0), _str("ctor") {}
+
+    // ctor
+    MyObject(const char* p) : _len(strlen(p)), _str("ctor") { _init_data(p); }
+
+    // copy ctor
+    MyObject(const MyObject& obj) : _len(obj._len), _str(obj._str)
+    {
+        cout << "Copy Constructor is called! source: " << obj._data << " [" << (void*)(obj._data) << ']' << endl;
+        _init_data(obj._data);  // COPY!
+    }
+
+    // move ctor, with "noexcept"
+    // 问题：这样看起来好像加不加move都没有影响
+    // 而且还有个问题，string这里是怎么实现move的？为何不需要像char*那样的指针需要赋值为NULL？
+    // MyObject(MyObject&& obj) noexcept : _data(move(obj._data)), _len(move(obj._len)), _str(move(obj._str))
+    MyObject(MyObject&& obj) noexcept : _data(obj._data), _len(obj._len), _str(obj._str)
+    {
+        cout << "Move Constructor is called! source: " << obj._data << " [" << (void*)(obj._data) << ']' << endl;
+        cout << "obj._str is " << obj._str << ", _str is " << _str << endl;
+        obj._len = 0;
+        obj._data = NULL;  // 避免 delete (in dtor)
+        // TODO: verify this
+        obj._str = "mctor";
+    }
+
+    // copy assignment
+    MyObject& operator=(const MyObject& obj)
+    {
+        cout << "Copy Assignment is called! source: " << obj._data << " [" << (void*)(obj._data) << ']' << endl;
+        if (this != &obj) {
+            if (_data) delete _data;
+            _len = obj._len;
+            _str = obj._str;
+            _init_data(obj._data);  // COPY!
+        } else {
+            cout << "Self Assignment, Nothing to do." << endl;
+        }
+        return *this;
+    }
+
+    // move assignment
+    MyObject& operator=(MyObject&& obj) noexcept
+    {
+        cout << "Move Assignment is called! source: " << obj._data << " [" << (void*)(obj._data) << ']' << endl;
+        if (this != &obj) {
+            if (_data) delete _data;
+            _len = obj._len;
+            // TODO: verify this
+            _str = obj._str;
+            // 一个浅拷贝，没有new新的空间，相当于偷过来了
+            _data = obj._data;  // MOVE!
+            obj._len = 0;
+            // 跟上面的逻辑一样，非常重要
+            obj._data = NULL;  // 避免 delete (in dtor)
+            // TODO: verify this
+            obj._str = "massign";
+        }
+        return *this;
+    }
+
+    // dtor
+    // 文檔說需 noexcept 但本處無. destructor is noexcept by default.
+    virtual ~MyObject()
+    {
+        cout << "Destructor is called! "
+             << "source: ";
+        if (_data) cout << _data;
+        cout << " [" << (void*)(_data) << ']' << endl;
+
+        // 只要当指针不是NULL的时候才delete，做一个doublecheck
+        // 与上面的设计配套，保证没问题
+        if (_data) {
+            delete _data;
+        }
+    }
+
+    void print() { cout << "data is " << _data << ", str is " << _str << endl; }
+};
+
+void test02_move_constructor()
+{
+    cout << "\n----------------------------------------------------------\n";
+    cout << "test02_move_constructor().......";
+    cout << "\n----------------------------------------------------------\n";
+
+    // 做了一个MyString的容器
+    vector<MyObject> vec;
+    // VIP: 加上reserve后就不怎么会扩容，所以reserve很重要！如果能知道大概大小的话
+    // 扩容是每次乘以2，这个还是比较有效的，在数据少的时候拷贝也还好
+    // vec.reserve(2);
+    // without reserve(N);
+    // 如果没有reserve，那么capcity初值为0
+    cout << "vector capacity is " << vec.capacity() << endl;
+
+    // Move Constructor is called! source: jjhou
+    // Destructor is called! [0]
+    vec.push_back(MyObject("jjhou"));
+    cout << "after push 1 element, vector capacity is " << vec.capacity() << endl;
+
+    // 这里会出现两次，是因为vector自动进行扩展，包含一次内部拷贝
+    // Move Constructor is called! source: sabrina
+    // Move Constructor is called! source: jjhou
+    // Destructor is called! [0]
+    // Destructor is called! [0]
+    // vec.push_back(MyString("sabrina"));
+    // cout << "after push 2 elements, vector capacity is " << vec.capacity() << endl;
+
+    // vec.push_back(MyString("stacy"));
+    // cout << "after push 3 elements, vector capacity is " << vec.capacity() << endl;
+
+    // vec.push_back(MyString("yujie"));
+    // cout << "after push 4 elements, vector capacity is " << vec.capacity() << endl;
+
+    for (auto& v : vec) {
+        v.print();
+    }
+
+    // 以上十分好：
+    //  1, 以 temp obj.放入容器，編譯器知道那是個 Rvalue, 於是呼叫 move ctor 而非 copy ctor.
+    //  2, 當 push_back() 引發 vector 擴展，擴展過程中使用 move 而非 copy.
+    cout << "vec.clear() ------- \n";
+    vec.clear();
+}
+
+}  // namespace yj02
+
 //---------------------------------------------------
 int main(int argc, char** argv)
 {
@@ -1003,4 +1150,6 @@ int main(int argc, char** argv)
     jj50::test50_hash();
 
     yj01::test01_emplace_back();
+
+    yj02::test02_move_constructor();
 }
