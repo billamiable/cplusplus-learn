@@ -206,20 +206,39 @@ void test12_Rvalue_Move()
     cout << "s2: " << s2 << endl;  // bbbb
 
     s = move(s1);
-    cout << "s: " << s << endl;  // aaaabbbb
+    cout << "s: " << s << endl;  // aaaa
     cout << "s1: " << s1 << endl;
 
     s = move(s2);
-    cout << "s: " << s << endl;  // aaaabbbb
+    cout << "s: " << s << endl;  // bbbb
     cout << "s2: " << s2 << endl;
 
     // TODO: 普通情况下用了Move都是后面不能用了，但是在相加时却不是？
     s = move(s1) + move(s2);
-    cout << "s: " << s << endl;    // aaaabbbb
+    cout << "s: " << s << endl;    //
     cout << "s1: " << s1 << endl;  //
-    cout << "s2: " << s2 << endl;  // bbbb
+    cout << "s2: " << s2 << endl;  //
 
     //----------------
+
+    // 对于没有移动构造函数的数据类型，移动就等于复制！！！
+    // 对于int，move没有用！
+    int a = 6;
+    int b = 4;
+    int c = a+b;
+
+    c = move(a);
+
+    cout << "a is " << a << ", b is " << b << ", c is " << c << endl;
+
+    // move对bool也没用！
+    bool aa = true;
+    bool bb = false;
+    bool cc = aa || bb;
+
+    cc = move(aa);
+
+    cout << "aa is " << aa << ", bb is " << bb << ", cc is " << cc << endl;
 
     int x = 4;
     int y = 8;
@@ -231,7 +250,7 @@ void test12_Rvalue_Move()
     // 这里也没理解是啥逻辑？
     s1 + s2 = s2;                  // 竟然可以通過編譯，作者自己违反了规则
     cout << "s1: " << s1 << endl;  // s1: Hello
-    cout << "s2: " << s2 << endl;  // s2: bbbb
+    cout << "s2: " << s2 << endl;  // s2:
     string() = "World";            // 對 temp obj 賦值可以，作者自己违反了规则
 
     complex<int> c1(2, 3), c2(4, 5);
@@ -466,8 +485,6 @@ namespace jj301 {
 // 当执行move时，相当于老的指针没用了，但是分配的内存没必要换了
 // 因此直接把新的指针指向这块内存，然后删除老的指针
 
-// TODO： 但是如果涉及到转发，可能是另一个story
-
 // http://www.ibm.com/developerworks/cn/aix/library/1307_lisl_c11/
 // http://stackoverflow.com/questions/8001823/how-to-enforce-move-semantics-when-a-vector-grows
 
@@ -515,6 +532,13 @@ public:
     // 这里两个指针指向同一个地址，后面一定要把其中一个打断
     // 注意：这里对于str._data进行std::move是没有意义的，因为move只是申明这个object后面
     // 可能会被偷，在实际赋值时直接让指针改变指向实现，因此对于指针进行move是没有意义的！
+
+    // 问题：1. 用不用move有区别吗？ 有！对于不同的数据类型区分对待！
+    // 2. 如果有，前面move了后面还可以用吗？还是只是值没了？ 数据类型合理情况下就是没了！
+    // 这里的str是右值，但是由于它有名字，所以根据编译器的规则是看作为左值，后面如果转调用是调用左值的函数
+    // 假设这里要做正确的转调用，那么必须要用std::forward，而且得做成template的方式！
+    // 因此，其实这里的str._data, _len, _print都最好加上move
+    // MyString(MyString&& str) noexcept : _data(move(str._data)), _len(move(str._len)), _print(move(str._print))
     MyString(MyString&& str) noexcept : _data(str._data), _len(str._len), _print(str._print)
     {
         if (_print)
@@ -528,6 +552,7 @@ public:
         // 在这里具体的体现是，输入的str是一个临时对象，在这个函数调用结束后会做析构，那就自动把数据删掉了！
         // 不然会报pointer being freed was not allocated，释放的c++指针没有分配（在程序最后释放另一个指针时报错）
         // 或者直接报错double free，这样就很明显了
+        // 本质：这个可以看成人为的move操作
         str._data = NULL;  // 避免 delete (in dtor)
     }
 
