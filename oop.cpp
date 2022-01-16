@@ -77,6 +77,7 @@ void test01_draw_using_polymorphism()
     r1.draw();  // Rect
     q1.draw();  // Square
 
+    // TODO: 换成智能指针
     Rect* pr = new Rect;
     pr->draw();  // Rect
     delete pr;

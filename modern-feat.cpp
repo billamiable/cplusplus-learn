@@ -983,12 +983,19 @@ void test01_emplace_back()
 // Move Constructor
 //----------------------------------------------------
 namespace yj02 {
+class SomeDataStructure {
+public:
+    SomeDataStructure() { cout << " Base::Base()" << endl; }
+    ~SomeDataStructure() { cout << " Base::~Base()" << endl; }
+};
 
 class MyObject {
 private:
     char* _data;
     size_t _len;
     string _str;
+    // 这个其实相当于composition by reference
+    shared_ptr<SomeDataStructure> _ptr;
 
     void _init_data(const char* s)
     {
@@ -999,13 +1006,14 @@ private:
 
 public:
     // default ctor
-    MyObject() : _data(NULL), _len(0), _str("ctor") {}
+    // TODO: 如何初始化shared_ptr？去想想！
+    MyObject() : _data(NULL), _len(0), _str("ctor"), _ptr(nullptr) {}
 
     // ctor
-    MyObject(const char* p) : _len(strlen(p)), _str("ctor") { _init_data(p); }
+    MyObject(const char* p) : _len(strlen(p)), _str("ctor"), _ptr(nullptr) { _init_data(p); }
 
     // copy ctor
-    MyObject(const MyObject& obj) : _len(obj._len), _str(obj._str)
+    MyObject(const MyObject& obj) : _len(obj._len), _str(obj._str), _ptr(obj._ptr)
     {
         cout << "Copy Constructor is called! source: " << obj._data << " [" << (void*)(obj._data) << ']' << endl;
         _init_data(obj._data);  // COPY!
@@ -1018,10 +1026,11 @@ public:
     // 实现的方法就是上面的MyString，所以调用了move后自动就会完成指针的赋值了，用户是不用管的
     // MyObject(MyObject&& obj) noexcept : _data(move(obj._data)), _len(move(obj._len)), _str(move(obj._str))
     // 给一个cpp reference上的高级写法，exchange是给obj._len赋值为0，然后return obj._len的old value给_len
-    MyObject(MyObject&& obj) noexcept : _data(obj._data), _len(exchange(obj._len, 0)), _str(move(obj._str))
+    MyObject(MyObject&& obj) noexcept : _data(obj._data), _len(exchange(obj._len, 0)), _str(move(obj._str)), _ptr(move(obj._ptr))
     {
         cout << "Move Constructor is called! source: " << obj._data << " [" << (void*)(obj._data) << ']' << endl;
         cout << "obj._str is " << obj._str << ", _str is " << _str << endl;
+        cout << "obj._ptr is " << obj._ptr << ", _ptr is " << _ptr << endl;
         // 由于用了exchange，所以这里不用再赋值了
         // obj._len = 0;
         obj._data = NULL;  // 避免 delete (in dtor)
@@ -1035,6 +1044,7 @@ public:
             if (_data) delete _data;
             _len = obj._len;
             _str = obj._str;
+            _ptr = obj._ptr;
             _init_data(obj._data);  // COPY!
         } else {
             cout << "Self Assignment, Nothing to do." << endl;
@@ -1054,6 +1064,7 @@ public:
             // _len = obj._len;
             // 大概率是这样实现move assignment
             _str = move(obj._str);
+            _ptr = move(obj._ptr);
             // 一个浅拷贝，没有new新的空间，相当于偷过来了
             _data = obj._data;  // MOVE!
             // obj._len = 0;
