@@ -1012,17 +1012,16 @@ public:
     }
 
     // move ctor, with "noexcept"
-    // 问题：这样看起来好像加不加move都没有影响
-    // 而且还有个问题，string这里是怎么实现move的？为何不需要像char*那样的指针需要赋值为NULL？
-    // MyObject(MyObject&& obj) noexcept : _data(move(obj._data)), _len(move(obj._len)), _str(move(obj._str))
-    MyObject(MyObject&& obj) noexcept : _data(obj._data), _len(obj._len), _str(obj._str)
+    // 问题：加不加move都没有区别？
+    // 这里必须加上move才是move ctor，不然你想不就是copy ctor了
+    // 问题：string是怎么实现move的？为何不需要像char*那样的指针需要赋值为NULL？
+    // 实现的方法就是上面的MyString，所以调用了move后自动就会完成指针的赋值了，用户是不用管的
+    MyObject(MyObject&& obj) noexcept : _data(move(obj._data)), _len(move(obj._len)), _str(move(obj._str))
     {
         cout << "Move Constructor is called! source: " << obj._data << " [" << (void*)(obj._data) << ']' << endl;
         cout << "obj._str is " << obj._str << ", _str is " << _str << endl;
         obj._len = 0;
         obj._data = NULL;  // 避免 delete (in dtor)
-        // TODO: verify this
-        obj._str = "mctor";
     }
 
     // copy assignment
@@ -1041,21 +1040,20 @@ public:
     }
 
     // move assignment
+    // TODO: 需要double check一下move assignment的string是怎么做的？
     MyObject& operator=(MyObject&& obj) noexcept
     {
         cout << "Move Assignment is called! source: " << obj._data << " [" << (void*)(obj._data) << ']' << endl;
         if (this != &obj) {
             if (_data) delete _data;
             _len = obj._len;
-            // TODO: verify this
-            _str = obj._str;
+            // 大概率是这样实现move assignment
+            _str = move(obj._str);
             // 一个浅拷贝，没有new新的空间，相当于偷过来了
             _data = obj._data;  // MOVE!
             obj._len = 0;
             // 跟上面的逻辑一样，非常重要
             obj._data = NULL;  // 避免 delete (in dtor)
-            // TODO: verify this
-            obj._str = "massign";
         }
         return *this;
     }
@@ -1085,12 +1083,8 @@ void test02_move_constructor()
     cout << "test02_move_constructor().......";
     cout << "\n----------------------------------------------------------\n";
 
-    // 做了一个MyString的容器
+    // 做了一个MyObject的容器
     vector<MyObject> vec;
-    // VIP: 加上reserve后就不怎么会扩容，所以reserve很重要！如果能知道大概大小的话
-    // 扩容是每次乘以2，这个还是比较有效的，在数据少的时候拷贝也还好
-    // vec.reserve(2);
-    // without reserve(N);
     // 如果没有reserve，那么capcity初值为0
     cout << "vector capacity is " << vec.capacity() << endl;
 
@@ -1098,20 +1092,6 @@ void test02_move_constructor()
     // Destructor is called! [0]
     vec.push_back(MyObject("jjhou"));
     cout << "after push 1 element, vector capacity is " << vec.capacity() << endl;
-
-    // 这里会出现两次，是因为vector自动进行扩展，包含一次内部拷贝
-    // Move Constructor is called! source: sabrina
-    // Move Constructor is called! source: jjhou
-    // Destructor is called! [0]
-    // Destructor is called! [0]
-    // vec.push_back(MyString("sabrina"));
-    // cout << "after push 2 elements, vector capacity is " << vec.capacity() << endl;
-
-    // vec.push_back(MyString("stacy"));
-    // cout << "after push 3 elements, vector capacity is " << vec.capacity() << endl;
-
-    // vec.push_back(MyString("yujie"));
-    // cout << "after push 4 elements, vector capacity is " << vec.capacity() << endl;
 
     for (auto& v : vec) {
         v.print();
