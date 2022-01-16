@@ -1016,11 +1016,14 @@ public:
     // 这里必须加上move才是move ctor，不然你想不就是copy ctor了
     // 问题：string是怎么实现move的？为何不需要像char*那样的指针需要赋值为NULL？
     // 实现的方法就是上面的MyString，所以调用了move后自动就会完成指针的赋值了，用户是不用管的
-    MyObject(MyObject&& obj) noexcept : _data(move(obj._data)), _len(move(obj._len)), _str(move(obj._str))
+    // MyObject(MyObject&& obj) noexcept : _data(move(obj._data)), _len(move(obj._len)), _str(move(obj._str))
+    // 给一个cpp reference上的高级写法，exchange是给obj._len赋值为0，然后return obj._len的old value给_len
+    MyObject(MyObject&& obj) noexcept : _data(obj._data), _len(exchange(obj._len, 0)), _str(move(obj._str))
     {
         cout << "Move Constructor is called! source: " << obj._data << " [" << (void*)(obj._data) << ']' << endl;
         cout << "obj._str is " << obj._str << ", _str is " << _str << endl;
-        obj._len = 0;
+        // 由于用了exchange，所以这里不用再赋值了
+        // obj._len = 0;
         obj._data = NULL;  // 避免 delete (in dtor)
     }
 
@@ -1046,12 +1049,14 @@ public:
         cout << "Move Assignment is called! source: " << obj._data << " [" << (void*)(obj._data) << ']' << endl;
         if (this != &obj) {
             if (_data) delete _data;
-            _len = obj._len;
+            // 同理可以用上新特性
+            _len = exchange(obj._len, 0);
+            // _len = obj._len;
             // 大概率是这样实现move assignment
             _str = move(obj._str);
             // 一个浅拷贝，没有new新的空间，相当于偷过来了
             _data = obj._data;  // MOVE!
-            obj._len = 0;
+            // obj._len = 0;
             // 跟上面的逻辑一样，非常重要
             obj._data = NULL;  // 避免 delete (in dtor)
         }
