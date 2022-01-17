@@ -225,7 +225,7 @@ void test12_Rvalue_Move()
     // 对于int，move没有用！
     int a = 6;
     int b = 4;
-    int c = a+b;
+    int c = a + b;
 
     c = move(a);
 
@@ -403,7 +403,7 @@ class tuple<> {
 template <typename Head, typename... Tail>
 // TODO: 这个继承了tuple<Tail...>不是很能理解？
 class tuple<Head, Tail...> : private tuple<Tail...> {
-    typedef tuple<Tail...> inherited; // 而且继承的父类变成了inherited?
+    typedef tuple<Tail...> inherited;  // 而且继承的父类变成了inherited?
 
 public:
     tuple() {}
@@ -417,8 +417,7 @@ protected:
     Head m_head;
 };
 
-
-}
+}  // namespace case6
 
 //~~~~~~~~~~~~~~~
 // case7
@@ -468,7 +467,7 @@ void test15_variadic_template()
     cout << t2.tail().tail().head() << endl;
     cout << t2.tail().tail().tail().head() << endl;
 
-    case6::tuple<string, complex<int>, double> t3("St", complex<int>(4,9), 1.6);
+    case6::tuple<string, complex<int>, double> t3("St", complex<int>(4, 9), 1.6);
     cout << sizeof(t3) << endl;
     cout << t3.head() << endl;
     cout << t3.tail().head() << endl;
@@ -1060,7 +1059,6 @@ public:
     }
 
     // move assignment
-    // TODO: 需要double check一下move assignment的string是怎么做的？
     MyObject& operator=(MyObject&& obj) noexcept
     {
         cout << "Move Assignment is called! source: " << obj._data << " [" << (void*)(obj._data) << ']' << endl;
