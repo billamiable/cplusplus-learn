@@ -1126,6 +1126,208 @@ void test02_move_constructor()
 
 }  // namespace yj02
 
+//----------------------------------------------------
+// Universal Reference
+//----------------------------------------------------
+namespace yj03 {
+namespace case1 {
+class CopyMove {
+public:
+    CopyMove() { cout << "CopyMove ctor" << endl; }
+    ~CopyMove() { cout << "CopyMove dtor" << endl; }
+
+    // 这个写法好奇怪
+    CopyMove(CopyMove const&) { cout << "CopyMove copy ctor" << endl; }
+    CopyMove& operator=(CopyMove const&)
+    {
+        cout << "CopyMove copy assignment" << endl;
+        return *this;
+    }
+    CopyMove(CopyMove&&) { cout << "CopyMove move ctor" << endl; }
+    CopyMove& operator=(CopyMove&&)
+    {
+        cout << "CopyMove move assignment" << endl;
+        return *this;
+    }
+};
+
+// 调用函数列表
+void f1(CopyMove) { cout << "f1(), pass by value" << endl; }
+void f2(CopyMove&) { cout << "f2(), pass by reference" << endl; }
+void f3(const CopyMove&) { cout << "f3(), pass by reference to const" << endl; }
+void f4(CopyMove&&) { cout << "f4(), pass by R-value reference" << endl; }
+void f5(const CopyMove&&) { cout << "f5(), pass by R-value reference to const" << endl; }
+template <typename T>
+void f6(T&&)
+{
+    cout << "f6(), pass by universal reference" << endl;
+}
+}  // namespace case1
+
+namespace case2 {
+class CopyOnly {
+public:
+    CopyOnly() { cout << "CopyOnly ctor" << endl; };
+    ~CopyOnly() { cout << "CopyOnly dtor" << endl; };
+
+    // 这个写法好奇怪
+    CopyOnly(CopyOnly const&) { cout << "CopyOnly copy ctor" << endl; };
+    CopyOnly& operator=(CopyOnly const&)
+    {
+        cout << "CopyOnly copy assignment" << endl;
+        return *this;
+    }
+    CopyOnly(CopyOnly&&) = delete;
+    CopyOnly& operator=(CopyOnly&&) = delete;
+};
+
+// 调用函数列表
+void f1(CopyOnly) { cout << "f1(), pass by value" << endl; }
+void f2(CopyOnly&) { cout << "f2(), pass by reference" << endl; }
+void f3(const CopyOnly&) { cout << "f3(), pass by reference to const" << endl; }
+void f4(CopyOnly&&) { cout << "f4(), pass by R-value reference" << endl; }
+void f5(const CopyOnly&&) { cout << "f5(), pass by R-value reference to const" << endl; }
+template <typename T>
+void f6(T&&)
+{
+    cout << "f6(), pass by universal reference" << endl;
+}
+
+}  // namespace case2
+
+namespace case3 {
+class MoveOnly {
+public:
+    MoveOnly() { cout << "MoveOnly ctor" << endl; };
+    ~MoveOnly() { cout << "MoveOnly dtor" << endl; };
+
+    // 这个写法好奇怪
+    MoveOnly(MoveOnly const&) = delete;
+    MoveOnly& operator=(MoveOnly const&) = delete;
+    MoveOnly(MoveOnly&&) { cout << "MoveOnly move ctor" << endl; };
+    MoveOnly& operator=(MoveOnly&&)
+    {
+        cout << "MoveOnly move assignment" << endl;
+        return *this;
+    }
+};
+
+// 调用函数列表
+void f1(MoveOnly) { cout << "f1(), pass by value" << endl; }
+void f2(MoveOnly&) { cout << "f2(), pass by reference" << endl; }
+void f3(const MoveOnly&) { cout << "f3(), pass by reference to const" << endl; }
+void f4(MoveOnly&&) { cout << "f4(), pass by R-value reference" << endl; }
+void f5(const MoveOnly&&) { cout << "f5(), pass by R-value reference to const" << endl; }
+template <typename T>
+void f6(T&&)
+{
+    cout << "f6(), pass by universal reference" << endl;
+}
+}  // namespace case3
+
+// 具体的测试
+void test03_universal_reference()
+{
+    cout << "\n----------------------------------------------------------\n";
+    cout << "test03_universal_reference()..........";
+    cout << "\n----------------------------------------------------------\n";
+
+    {
+        using namespace case1;
+        cout << "-------------------------------------------" << endl;
+        cout << "CopyMove test" << endl;
+        cout << "-------------------------------------------" << endl;
+
+        CopyMove myCopyMove;
+        f1(myCopyMove);
+        f2(myCopyMove);
+        f3(myCopyMove);
+
+        f1(move(myCopyMove));
+        //! f2(move(myCopyMove));
+        f3(move(myCopyMove));
+
+        //! f4(myCopyMove);
+        //! f5(myCopyMove);
+        f4(move(myCopyMove));
+        f5(move(myCopyMove));
+
+        f4(CopyMove());
+        f5(CopyMove());
+
+        // 都可以接收
+        f6(myCopyMove);
+        f6(move(myCopyMove));
+        f6(CopyMove());
+
+        cout << endl;
+    }
+
+    {
+        using namespace case2;
+        cout << "-------------------------------------------" << endl;
+        cout << "CopyOnly test" << endl;
+        cout << "-------------------------------------------" << endl;
+
+        CopyOnly myCopyOnly;
+        f1(myCopyOnly);
+        f2(myCopyOnly);
+        f3(myCopyOnly);
+
+        //! f1(move(myCopyOnly));
+        //! f2(move(myCopyOnly));
+        f3(move(myCopyOnly));
+
+        //! f4(myCopyOnly);
+        //! f5(myCopyOnly);
+        f4(move(myCopyOnly));
+        f5(move(myCopyOnly));
+
+        f4(CopyOnly());
+        f5(CopyOnly());
+
+        // 都可以接收
+        f6(myCopyOnly);
+        f6(move(myCopyOnly));
+        f6(CopyOnly());
+
+        cout << endl;
+    }
+
+    {
+        using namespace case3;
+        cout << "-------------------------------------------" << endl;
+        cout << "MoveOnly test" << endl;
+        cout << "-------------------------------------------" << endl;
+
+        MoveOnly myMoveOnly;
+        //! f1(myMoveOnly);
+        f2(myMoveOnly);
+        f3(myMoveOnly);
+
+        f1(move(myMoveOnly));
+        //! f2(move(myMoveOnly));
+        f3(move(myMoveOnly));
+
+        //! f4(myMoveOnly);
+        //! f5(myMoveOnly);
+        f4(move(myMoveOnly));
+        f5(move(myMoveOnly));
+
+        f4(MoveOnly());
+        f5(MoveOnly());
+
+        // 都可以接收
+        f6(myMoveOnly);
+        f6(move(myMoveOnly));
+        f6(MoveOnly());
+
+        cout << endl;
+    }
+}
+
+}  // namespace yj03
+
 //---------------------------------------------------
 int main(int argc, char** argv)
 {
@@ -1152,4 +1354,6 @@ int main(int argc, char** argv)
     yj01::test01_emplace_back();
 
     yj02::test02_move_constructor();
+
+    yj03::test03_universal_reference();
 }
