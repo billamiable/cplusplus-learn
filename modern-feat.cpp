@@ -1178,8 +1178,8 @@ public:
         cout << "CopyOnly copy assignment" << endl;
         return *this;
     }
-    CopyOnly(CopyOnly&&) = delete;
-    CopyOnly& operator=(CopyOnly&&) = delete;
+    CopyOnly(CopyOnly&&) = delete;             // 这里的delete很妙！
+    CopyOnly& operator=(CopyOnly&&) = delete;  // 这里的delete很妙！
 };
 
 // 调用函数列表
@@ -1203,8 +1203,8 @@ public:
     ~MoveOnly() { cout << "MoveOnly dtor" << endl; };
 
     // 这个写法好奇怪
-    MoveOnly(MoveOnly const&) = delete;
-    MoveOnly& operator=(MoveOnly const&) = delete;
+    MoveOnly(MoveOnly const&) = delete;             // 这里的delete很妙！
+    MoveOnly& operator=(MoveOnly const&) = delete;  // 这里的delete很妙！
     MoveOnly(MoveOnly&&) { cout << "MoveOnly move ctor" << endl; };
     MoveOnly& operator=(MoveOnly&&)
     {
@@ -1239,27 +1239,38 @@ void test03_universal_reference()
         cout << "CopyMove test" << endl;
         cout << "-------------------------------------------" << endl;
 
-        CopyMove myCopyMove;
-        f1(myCopyMove);
-        f2(myCopyMove);
-        f3(myCopyMove);
+        CopyMove myCopyMove;  // ctor
+        f1(myCopyMove);       // copy ctor + f1 + dtor
+        f2(myCopyMove);       // f2
+        f3(myCopyMove);       // f3
 
-        f1(move(myCopyMove));
+        // 左值value可以接受右值的输入
+        f1(move(myCopyMove));  // move ctor + f1 + dtor
+        // 左值reference不可以接受右值的输入
+        // 编译报错： cannot bind non-const lvalue reference to an rvalue
         //! f2(move(myCopyMove));
-        f3(move(myCopyMove));
+        // 左值const reference可以接受右值的输入
+        f3(move(myCopyMove));  // f3
 
+        // 右值reference和右值const reference都不接受左值的输入
+        // 编译报错： cannot bind rvalue reference to lvalue
         //! f4(myCopyMove);
         //! f5(myCopyMove);
-        f4(move(myCopyMove));
-        f5(move(myCopyMove));
+        // 正常使用时内部不涉及到数据拷贝和类型转换
+        f4(move(myCopyMove));  // f4
+        // TODO： 用不用const没什么区别？那一般怎么要求？
+        f5(move(myCopyMove));  // f5
 
-        f4(CopyMove());
-        f5(CopyMove());
+        // 这里同理，只是会构造一个临时对象
+        f4(CopyMove());  // ctor + f4 + dtor
+        f5(CopyMove());  // ctor + f5 + dtor
 
-        // 都可以接收
-        f6(myCopyMove);
-        f6(move(myCopyMove));
-        f6(CopyMove());
+        // universal reference什么都可以接收
+        // 注意这里不会调用到任何函数，包括copy ctor和move ctor
+        f6(myCopyMove);  // f6
+        // 注意这里不会调用到任何函数，包括copy ctor和move ctor
+        f6(move(myCopyMove));  // f6
+        f6(CopyMove());        // ctor + f6 + dtor
 
         cout << endl;
     }
@@ -1270,27 +1281,33 @@ void test03_universal_reference()
         cout << "CopyOnly test" << endl;
         cout << "-------------------------------------------" << endl;
 
-        CopyOnly myCopyOnly;
-        f1(myCopyOnly);
-        f2(myCopyOnly);
-        f3(myCopyOnly);
+        CopyOnly myCopyOnly;  // ctor
+        f1(myCopyOnly);       // copy ctor + f1 + dtor
+        f2(myCopyOnly);       // f2
+        f3(myCopyOnly);       // f3
 
+        // 删除move ctor后就左值value接受不了右值了
+        // 编译报错：use of deleted function (move ctor)
         //! f1(move(myCopyOnly));
+        // 左值reference本来就不能接受右值，跟上面一样
+        // 编译报错： cannot bind non-const lvalue reference to an rvalue
         //! f2(move(myCopyOnly));
-        f3(move(myCopyOnly));
+        // 这里还是可以正常运行，说明其实上面本质是有一个隐式类型转换！！！
+        f3(move(myCopyOnly));  // f3
 
+        // 下面这一趴根上面都一样
         //! f4(myCopyOnly);
         //! f5(myCopyOnly);
-        f4(move(myCopyOnly));
-        f5(move(myCopyOnly));
+        f4(move(myCopyOnly));  // f4
+        f5(move(myCopyOnly));  // f5
 
-        f4(CopyOnly());
-        f5(CopyOnly());
+        f4(CopyOnly());  // ctor + f4 + dtor
+        f5(CopyOnly());  // ctor + f5 + dtor
 
         // 都可以接收
-        f6(myCopyOnly);
-        f6(move(myCopyOnly));
-        f6(CopyOnly());
+        f6(myCopyOnly);        // f6
+        f6(move(myCopyOnly));  // f6
+        f6(CopyOnly());        // ctor + f6 + dtor
 
         cout << endl;
     }
@@ -1301,27 +1318,33 @@ void test03_universal_reference()
         cout << "MoveOnly test" << endl;
         cout << "-------------------------------------------" << endl;
 
-        MoveOnly myMoveOnly;
+        MoveOnly myMoveOnly;  // ctor
+        // 由于copy ctor被人为禁用，所以这里就不能用了
+        // 编译报错：use of deleted function (copy ctor)
         //! f1(myMoveOnly);
-        f2(myMoveOnly);
-        f3(myMoveOnly);
+        f2(myMoveOnly);  // f2
+        f3(myMoveOnly);  // f3
 
-        f1(move(myMoveOnly));
+        // 这里相当于用给定的move ctor改了下类型
+        // TODO: 为何不用加noexcept?
+        f1(move(myMoveOnly));  // move ctor + f1 + dtor
+        // 编译报错：cannot bind non-const lvalue reference to an rvalue
         //! f2(move(myMoveOnly));
-        f3(move(myMoveOnly));
+        f3(move(myMoveOnly));  // f3
 
+        // 这里依然和上面同理
         //! f4(myMoveOnly);
         //! f5(myMoveOnly);
-        f4(move(myMoveOnly));
-        f5(move(myMoveOnly));
+        f4(move(myMoveOnly));  // f4
+        f5(move(myMoveOnly));  // f5
 
-        f4(MoveOnly());
-        f5(MoveOnly());
+        f4(MoveOnly());  // ctor + f4 + dtor
+        f5(MoveOnly());  // ctor + f5 + dtor
 
         // 都可以接收
-        f6(myMoveOnly);
-        f6(move(myMoveOnly));
-        f6(MoveOnly());
+        f6(myMoveOnly);        // f6
+        f6(move(myMoveOnly));  // f6
+        f6(MoveOnly());        // ctor + f6 + dtor
 
         cout << endl;
     }
