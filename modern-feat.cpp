@@ -909,7 +909,10 @@ public:
 
     // 注意：只有在使用noexcept的时候，vector扩展才会调用move ctor
     // 但是与是否使用std::move无关，move了后面就用不了
-    // TODO: 为何要用std::move呢？我觉得是写法这样比较规范
+    // 为何要用std::move呢？
+    // 这个的答案很有意思，分成两个层面来回答：
+    // 1. other在内容上是右值，但是由于它有参数名，所以在编译器的规则下是左值，所以为了让编译器认识需要加上move
+    // 2. 由于数据类型是string，必须要用move才会真正调用move操作以提升效率，不然还是copy
     President(President&& other) noexcept : name(std::move(other.name)), year(other.year)
     // President(President&& other) noexcept : name(other.name), year(other.year)
     {
