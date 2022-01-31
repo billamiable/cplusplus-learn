@@ -1,4 +1,4 @@
-// author: Yujie Wang & Jie Hou
+// author: Jie Hou & Yujie Wang
 // Rearrage the code according to the course order
 // Incorporate my own implementation and thoughts
 
@@ -89,13 +89,13 @@ void test03_initializer_list()
         v3 = {4, 5, 6, 7};
         v3.insert(v3.begin() + 2, {0, 2, 3});
 
-        for (auto i : v3) cout << i << " ";
+        for (auto i : v3) cout << i << " ";  // 4 5 0 2 3 6 7
         cout << endl;
 
-        cout << max({string("A"), string("Stacy"), string("Sabrina")}) << endl;
-        cout << min({string("A"), string("Stacy"), string("Sabrina")}) << endl;
-        cout << max({54, 23, 2}) << endl;
-        cout << min({54, 23, 2}) << endl;
+        cout << max({string("A"), string("Stacy"), string("Sabrina")}) << endl;  // Stacy
+        cout << min({string("A"), string("Stacy"), string("Sabrina")}) << endl;  // A
+        cout << max({54, 23, 2}) << endl;                                        // 54
+        cout << min({54, 23, 2}) << endl;                                        // 2
     }
 }
 }  // namespace jj03
@@ -104,8 +104,7 @@ void test03_initializer_list()
 // Lambda
 //----------------------------------------------------
 namespace jj06 {
-// TODO: function是啥？
-// 其实可以用另一个写法来实现一样的功能
+// TODO: function是什么？ lambda的retun type？
 function<int(int, int)> returnLambda()
 {
     return [](int x, int y) { return x * y; };
@@ -121,7 +120,7 @@ void test06_lambda()
     // lf()创建了lambda的对象
     cout << lf(9, 8) << endl;  // 72
 
-    // TODO: 这里没看明白在干啥？？
+    // TODO: 没看懂下面要测试的东西
     // //[Error] no matching function for call to 'std::function<int(int, int)>::function(int, int)'
     // ! decltype(lf)(3,5);
 
@@ -135,8 +134,9 @@ void test06_lambda()
         static int x = 5;
         int y = 6;
         return x;
-    }();  // 这里()直接创建对象，就print了，一般很少这样写
+    }();  // 这里在lambda后使用()会直接创建对象，并调用内部的print（一般很少这样写）
 
+    // 下面是一组对比实验
     {
         int id = 0;
         // id是外部变量，取值
@@ -146,7 +146,7 @@ void test06_lambda()
             cout << "id: " << id << endl;
             ++id;
         };
-        // 这个实验挺有趣
+
         id = 42;
         f();                 // id: 0
         f();                 // id: 1
@@ -171,9 +171,9 @@ void test06_lambda()
             ++param;  // 和 mutable 無關
         };
         id = 42;
-        f(7);                // id: 42，因为reference不会创建新的，f()在id=42后面，所以已经变了
-        f(7);                // id: 43
-        f(7);                // id: 44
+        f(7);  // id: 42，由于使用引用不会创建新的对象，且f()在id=42后面，所以id的值变了
+        f(7);  // id: 43
+        f(7);  // id: 44
         cout << id << endl;  // 45，改了合理
     }
 
