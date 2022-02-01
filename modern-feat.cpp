@@ -264,23 +264,22 @@ void test12_Rvalue_Move()
 }  // namespace jj12
 
 //----------------------------------------------------
-// Variadic Templates
+// Variadic Template
 //----------------------------------------------------
 namespace jj15 {
-// 这里的内容包含了最开始和专门针对variadic template来讲的两块内容
+// 以下代码包含了variadic template部分的所有内容
 
 //~~~~~~~~~~~~~~~
 // case4
 // recursive function calling.
 namespace case4 {
-// 这个是作为stopping criterion，非常重要！
-// 用来在recursive call的最后一轮用的
+// 这个在recursive call的最后一轮被调用到，非常重要！
 void printX() {}
 
 template <typename T, typename... Types>
 void printX(const T& firstArg, const Types&... args)
 {
-    // 实际使用的时候需要保证可以cout
+    // 实际使用时需要保证该数据类型支持了cout
     cout << firstArg << endl;  // print first argument
     printX(args...);           // recursive call for remaining arguments
 }
@@ -292,10 +291,9 @@ void printX(const T& firstArg, const Types&... args)
 // 用variadic template重写printf
 namespace case3 {
 // http://stackoverflow.com/questions/3634379/variadic-templates
-// 最后一个和一堆都没了，就只剩最开始的字符串
+// 这个在recursive call的最后一轮被调用到，只剩最开始的字符串
 void printf(const char* s)
 {
-    // 这个是stopping criterion
     // 模拟c的print方法，发现数量不匹配，输出错误
     while (*s) {
         if (*s == '%' && *(++s) != '%') throw std::runtime_error("invalid format string: missing arguments");
@@ -314,7 +312,7 @@ void printf(const char* s, T value, Args... args)
             printf(++s, args...);
             return;
         }
-        // TODO: 打印空格，这就是递归的后手，我常常不能理解的
+        // TODO: 递归的过程中打印空格，对于次序需要加深理解
         std::cout << *s++;
     }
     throw std::logic_error("extra arguments provided to printf");
@@ -327,7 +325,7 @@ void printf(const char* s, T value, Args... args)
 // 检测数据里最大的（initializer_list实现）
 namespace case1 {
 // ...\4.9.2\include\c++\bits\predefined_oops.h
-// 最终比大小用到的仿函数
+// 定义了仿函数，用于比大小
 struct _Iter_less_iter {
     // 本质是一个仿函数，做一个比较
     template <typename _Iterator1, typename _Iterator2>
@@ -347,7 +345,7 @@ _ForwardIterator __max_element(_ForwardIterator __first, _ForwardIterator __last
 {
     if (__first == __last) return __first;
     _ForwardIterator __result = __first;
-    // 很经典的比大小存下来最大的
+    // 比大小并存下来其中较大的
     while (++__first != __last) {
         if (__comp(__result, __first)) __result = __first;
     }
@@ -361,7 +359,7 @@ inline _ForwardIterator max_element(_ForwardIterator __first, _ForwardIterator _
     return __max_element(__first, __last, __iter_less_iter());
 }
 
-// 在输入数据阶段{}会自动生成initializer_list，然后调用里面的max函数
+// 在初始化阶段使用{}会自动生成initializer_list，并调用里面的max函数
 template <typename _Tp>
 inline _Tp max(initializer_list<_Tp> __l)
 {
@@ -388,6 +386,7 @@ int maximum(int n, Args... args)
 // case5
 // 以非一般的方式处理第一个和最后一个元素
 // refer to test07_tuples()
+// not yet implemented, refer to modern-feat-reference.cpp
 
 //~~~~~~~~~~~~~~~
 // case6
@@ -395,22 +394,22 @@ int maximum(int n, Args... args)
 namespace case6 {
 template <typename... Values>
 class tuple;
-// TODO: 这个看起来像stopping criterion
+// TODO: 这个是recursive call的最后一轮调用的吗？
 template <>
 class tuple<> {
 };
 
 // 分成head一个和tail一包
 template <typename Head, typename... Tail>
-// TODO: 这个继承了tuple<Tail...>不是很能理解？
+// TODO: 为何继承tuple<Tail...> ？
 class tuple<Head, Tail...> : private tuple<Tail...> {
-    typedef tuple<Tail...> inherited;  // 而且继承的父类变成了inherited?
+    typedef tuple<Tail...> inherited;  // 继承的父类变成了inherited?
 
 public:
     tuple() {}
     tuple(Head v, Tail... vtail) : m_head(v), inherited(vtail...) {}
     Head head() { return m_head; }
-    // TODO: 这里的this如何判断是inherited的？
+    // TODO: 如何判断这里的this是inherited类型？
     // 可以跟后面的recursive composition对比下，后面是直接return m_tail
     inherited& tail() { return *this; }
 
@@ -423,6 +422,7 @@ protected:
 //~~~~~~~~~~~~~~~
 // case7
 // recursive composition
+// not yet implemented, refer to modern-feat-reference.cpp
 namespace case7 {
 
 }
@@ -436,12 +436,13 @@ void test15_variadic_template()
 
     // case4
     cout << "\n.....case4..........\n";
-    case4::printX(7.5, "hello", bitset<16>(377), 42);
+    case4::printX(7.5, "hello", bitset<16>(377), 42);  // 7.5 hello 0000000101111001 42
 
     // case3
     cout << "\n.....case3..........\n";
-    int* pi = new int;  // 只是为了打印多样性
-                        // 15 This is Ace. 0x7fb5aa403430 3.14159
+    int* pi = new int;  // 为了体现variadic template能支持许多不同的数据类型打印
+                        // 15 This is Ace. 0x7fb5aa403430 3.14159 ~end~
+                        // ~end~
     case3::printf("%d %s %p %f \n", 15, "This is Ace.", pi, 3.141592653);
 
     // case1
@@ -453,26 +454,27 @@ void test15_variadic_template()
     cout << case2::maximum(57, 48, 60, 100, 20, 18) << endl;  // 100
 
     // case 6
+    cout << "\n.....case6..........\n";
     case6::tuple<int, float, string> t1(41, 6.3, "nico");
-    cout << sizeof(t1) << endl;
-    cout << t1.head() << endl;
-    cout << t1.tail().head() << endl;
-    cout << t1.tail().tail().head() << endl;
+    cout << sizeof(t1) << endl;               // 32
+    cout << t1.head() << endl;                // 41
+    cout << t1.tail().head() << endl;         // 6.3
+    cout << t1.tail().tail().head() << endl;  // nico
 
-    cout << sizeof(bitset<16>) << endl;
+    cout << sizeof(bitset<16>) << endl;  // 8
 
     case6::tuple<string, complex<int>, bitset<16>, double> t2("Ac", complex<int>(3, 8), bitset<16>(37), 3.14);
-    cout << sizeof(t2) << endl;
-    cout << t2.head() << endl;
-    cout << t2.tail().head() << endl;
-    cout << t2.tail().tail().head() << endl;
-    cout << t2.tail().tail().tail().head() << endl;
+    cout << sizeof(t2) << endl;                      // 48
+    cout << t2.head() << endl;                       // Ac
+    cout << t2.tail().head() << endl;                // (3,8)
+    cout << t2.tail().tail().head() << endl;         // 0000000000100101
+    cout << t2.tail().tail().tail().head() << endl;  // 3.14
 
     case6::tuple<string, complex<int>, double> t3("St", complex<int>(4, 9), 1.6);
-    cout << sizeof(t3) << endl;
-    cout << t3.head() << endl;
-    cout << t3.tail().head() << endl;
-    cout << t3.tail().tail().head() << endl;
+    cout << sizeof(t3) << endl;               // 40
+    cout << t3.head() << endl;                // St
+    cout << t3.tail().head() << endl;         // (4,9)
+    cout << t3.tail().tail().head() << endl;  // 1.6
 }
 }  // namespace jj15
 
