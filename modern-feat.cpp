@@ -199,6 +199,8 @@ void test12_Rvalue_Move()
 
     string s1("aaaa");
     string s2("bbbb");
+    string s3("cccc");
+    string s4("dddd");
     string s = s1 + s2;
 
     cout << "s: " << s << endl;    // aaaabbbb
@@ -206,23 +208,23 @@ void test12_Rvalue_Move()
     cout << "s2: " << s2 << endl;  // bbbb
 
     s = move(s1);
-    cout << "s: " << s << endl;  // aaaa
-    cout << "s1: " << s1 << endl;
+    cout << "s: " << s << endl;    // aaaa
+    cout << "s1: " << s1 << endl;  // empty
 
     s = move(s2);
-    cout << "s: " << s << endl;  // bbbb
-    cout << "s2: " << s2 << endl;
+    cout << "s: " << s << endl;    // bbbb
+    cout << "s2: " << s2 << endl;  // empty
 
-    // TODO: 普通情况下用了Move都是后面不能用了，但是在相加时却不是？
-    s = move(s1) + move(s2);
-    cout << "s: " << s << endl;    //
-    cout << "s1: " << s1 << endl;  //
-    cout << "s2: " << s2 << endl;  //
+    // TODO: 普通情况下使用Move后面值为空，但是在相加时的第二项却不符合？
+    s = move(s3) + move(s4);
+    cout << "s: " << s << endl;    // ccccdddd
+    cout << "s3: " << s3 << endl;  // empty
+    cout << "s4: " << s4 << endl;  // dddd
 
     //----------------
 
-    // 对于没有移动构造函数的数据类型，移动就等于复制！！！
-    // 对于int，move没有用！
+    // 对于没有移动构造函数的数据类型，移动就等同于复制！！！
+    // 例如，对于int，move后值不为空！
     int a = 6;
     int b = 4;
     int c = a + b;
@@ -231,7 +233,7 @@ void test12_Rvalue_Move()
 
     cout << "a is " << a << ", b is " << b << ", c is " << c << endl;
 
-    // move对bool也没用！
+    // 再比如，对bool类型也没用！
     bool aa = true;
     bool bb = false;
     bool cc = aa || bb;
@@ -247,14 +249,13 @@ void test12_Rvalue_Move()
     //----------------
 
     s1 = "Hello ";
-    // 这里也没理解是啥逻辑？
-    s1 + s2 = s2;                  // 竟然可以通過編譯，作者自己违反了规则
+    s1 + s2 = s2;                  // TODO: 竟然可以通過編譯，作者自己违反了规则
     cout << "s1: " << s1 << endl;  // s1: Hello
     cout << "s2: " << s2 << endl;  // s2:
     string() = "World";            // 對 temp obj 賦值可以，作者自己违反了规则
 
     complex<int> c1(2, 3), c2(4, 5);
-    c1 + c2 = complex<int>(6, 9);         // 感觉没用？？
+    c1 + c2 = complex<int>(6, 9);         // TODO: 不理解什么意思
     cout << "c1: " << c1 << endl;         // c1: (2,3)
     cout << "c2: " << c2 << endl;         // c2: (4,5)
     complex<int>() = complex<int>(6, 9);  // 對 temp obj 賦值可以，作者自己违反了规则
@@ -1361,9 +1362,9 @@ int main(int argc, char** argv)
 
     jj06::test06_lambda();
 
-    jj15::test15_variadic_template();
-
     jj12::test12_Rvalue_Move();
+
+    jj15::test15_variadic_template();
 
     jj301::test301_move_semantics_with_noexcept();
 
