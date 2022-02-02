@@ -11,6 +11,173 @@
 using namespace std;
 
 //----------------------------------------------------
+// Factory Method
+//----------------------------------------------------
+namespace jj07 {
+// Abstract base class declared by framework
+class Document {
+public:
+    // 这里strcpy相当于保存了字符串名称
+    Document(const char* fn) { strcpy(name, fn); }
+    virtual void Open() = 0;
+    virtual void Close() = 0;
+    char* GetName() { return name; }
+
+private:
+    // 这里存的是"foo"和"bar"这两个name
+    char name[20];
+};
+
+// Framework declaration
+class App {
+public:
+    App() : _index(0) { cout << "App: ctor" << endl; }
+
+    // THe client will call this "entry point" of the framework
+    void NewDocument(const char* name)
+    {
+        cout << "App: NewDocument()" << endl;
+        // Framework calls the "hole" reserved
+        _docs[_index] = CreateDocument(name);
+        _docs[_index++]->Open();  // 先执行_index的处理，再++
+    }
+
+    // 这里之所以可以调用到是因为父类存下来了MyDoc的对象
+    void ReportDocs()
+    {
+        cout << "App: ReportDocs()" << endl;
+        for (int i = 0; i < _index; ++i) cout << "  " << _docs[i]->GetName() << endl;
+    }
+
+    // Framework declares a "hole" for the client
+    virtual Document* CreateDocument(const char*) = 0;
+
+private:
+    int _index;
+    // Franework uses Document's base class
+    Document* _docs[20];
+};
+
+// Concrete derived class defined by client
+class MyDoc : public Document {
+public:
+    MyDoc(const char* fn) : Document(fn) {}
+    virtual void Open() { cout << "  MyDoc: Open()" << endl; }
+    virtual void Close() { cout << "  MyDoc: Close()" << endl; }
+};
+
+// Customization of framework defined
+class MyApp : public App {
+public:
+    MyApp() { cout << "  MyApp: ctor" << endl; }
+    // CLient defines Framework's hole
+    Document* CreateDocument(const char* fn)
+    {
+        cout << "  MyApp: CreateDocument()" << endl;
+        return new MyDoc(fn);
+    }
+};
+
+void test07_factory_method()
+{
+    cout << "\n----------------------------------------------------------\n";
+    cout << "test07_factory_method()..........";
+    cout << "\n----------------------------------------------------------\n";
+
+    // Client's customization
+    // 创建对象时，会先调用父类的构造函数，所谓从里到外的构造才坚实
+    MyApp myApp;
+
+    // 由于子类继承了所有父类函数的调用权，包括NewDocument，因此可以直接调用
+    // 然后由于父类无法直接获得子类创建的class名称（在这里是MyDoc），其实这里对象都存了？
+    // 要想获得则需要通过虚函数、指针、向上转型三要素
+    // 即定义虚函数CreateDocument，用Document*指针，将MyDoc的子类指针向上转型成了Document*
+    // 从而最后在父类中将子类创建的MyDoc对象存在_docs数组里
+    myApp.NewDocument("foo");
+    myApp.NewDocument("bar");
+    // 针对存下来的东西进行后续的处理
+    myApp.ReportDocs();
+}
+
+}  // namespace jj07
+
+//----------------------------------------------------
+// Any Reimplementation
+//----------------------------------------------------
+namespace jj08 {
+class myAny {
+public:
+    class placeholder {
+    public:
+        virtual ~placeholder() { cout << "placeholder dtor" << endl; }
+        // virtual const type_info
+        virtual placeholder* clone() const = 0;
+    };
+    template <typename T>
+    class holder : public placeholder {
+    public:
+        holder(const T& value) : held(value) { cout << "holder ctor" << endl; }
+
+        // 看起来是一个深拷贝，但最后是父类指针，指向子类对象
+        virtual placeholder* clone() const
+        {
+            cout << "holder clone" << endl;
+            return new holder(held);
+        }
+
+        T held;  // 真正的资料保存在这里
+    };
+
+public:
+    myAny() : content(NULL) { cout << "myAny ctor" << endl; }
+
+    // template ctor，参数可以为任意的type，真正资料保存在content里
+    template <typename T>
+    myAny(const T& value) : content(new holder<T>(value))
+    {
+        cout << "myAny template ctor" << endl;
+    }
+
+    // copy ctor，0就代表了NULL指针
+    myAny(const myAny& other) : content(other.content ? other.content->clone() : 0)
+    {
+        cout << "myAny copy ctor" << endl;
+    }
+
+    ~myAny()
+    {
+        cout << "myAny dtor" << endl;
+        if (content != NULL) delete content;
+    }
+
+private:
+    placeholder* content;
+};
+
+typedef list<myAny> list_any;
+
+void fill_list(list_any& la)
+{
+    // TODO: 单个的输出就很多，为啥呢？
+    la.push_back(10);
+    // la.push_back(string("I am a string"));
+    // const char* p = "I am char arry";
+    // la.push_back(p);
+}
+
+void test08_any_reimplementation()
+{
+    cout << "\n----------------------------------------------------------\n";
+    cout << "test08_any_reimplementation()..........";
+    cout << "\n----------------------------------------------------------\n";
+
+    list_any la;
+    fill_list(la);
+}
+
+}  // namespace jj08
+
+//----------------------------------------------------
 // Draw using Polymorphism
 //----------------------------------------------------
 namespace yj01 {
@@ -191,172 +358,6 @@ void test02_draw_not_using_polymorphism()
 
 }  // namespace yj02
 
-//----------------------------------------------------
-// Factory Method
-//----------------------------------------------------
-namespace jj07 {
-// Abstract base class declared by framework
-class Document {
-public:
-    // 这里strcpy相当于保存了字符串名称
-    Document(const char* fn) { strcpy(name, fn); }
-    virtual void Open() = 0;
-    virtual void Close() = 0;
-    char* GetName() { return name; }
-
-private:
-    // 这里存的是"foo"和"bar"这两个name
-    char name[20];
-};
-
-// Framework declaration
-class App {
-public:
-    App() : _index(0) { cout << "App: ctor" << endl; }
-
-    // THe client will call this "entry point" of the framework
-    void NewDocument(const char* name)
-    {
-        cout << "App: NewDocument()" << endl;
-        // Framework calls the "hole" reserved
-        _docs[_index] = CreateDocument(name);
-        _docs[_index++]->Open();  // 先执行_index的处理，再++
-    }
-
-    // 这里之所以可以调用到是因为父类存下来了MyDoc的对象
-    void ReportDocs()
-    {
-        cout << "App: ReportDocs()" << endl;
-        for (int i = 0; i < _index; ++i) cout << "  " << _docs[i]->GetName() << endl;
-    }
-
-    // Framework declares a "hole" for the client
-    virtual Document* CreateDocument(const char*) = 0;
-
-private:
-    int _index;
-    // Franework uses Document's base class
-    Document* _docs[20];
-};
-
-// Concrete derived class defined by client
-class MyDoc : public Document {
-public:
-    MyDoc(const char* fn) : Document(fn) {}
-    virtual void Open() { cout << "  MyDoc: Open()" << endl; }
-    virtual void Close() { cout << "  MyDoc: Close()" << endl; }
-};
-
-// Customization of framework defined
-class MyApp : public App {
-public:
-    MyApp() { cout << "  MyApp: ctor" << endl; }
-    // CLient defines Framework's hole
-    Document* CreateDocument(const char* fn)
-    {
-        cout << "  MyApp: CreateDocument()" << endl;
-        return new MyDoc(fn);
-    }
-};
-
-void test07_factory_method()
-{
-    cout << "\n----------------------------------------------------------\n";
-    cout << "test07_factory_method()..........";
-    cout << "\n----------------------------------------------------------\n";
-
-    // Client's customization
-    // 创建对象时，会先调用父类的构造函数，所谓从里到外的构造才坚实
-    MyApp myApp;
-
-    // 由于子类继承了所有父类函数的调用权，包括NewDocument，因此可以直接调用
-    // 然后由于父类无法直接获得子类创建的class名称（在这里是MyDoc），其实这里对象都存了？
-    // 要想获得则需要通过虚函数、指针、向上转型三要素
-    // 即定义虚函数CreateDocument，用Document*指针，将MyDoc的子类指针向上转型成了Document*
-    // 从而最后在父类中将子类创建的MyDoc对象存在_docs数组里
-    myApp.NewDocument("foo");
-    myApp.NewDocument("bar");
-    // 针对存下来的东西进行后续的处理
-    myApp.ReportDocs();
-}
-
-}  // namespace jj07
-
-//----------------------------------------------------
-// Any Reimplementation
-//----------------------------------------------------
-namespace jj08 {
-class myAny {
-public:
-    class placeholder {
-    public:
-        virtual ~placeholder() { cout << "placeholder dtor" << endl; }
-        // virtual const type_info
-        virtual placeholder* clone() const = 0;
-    };
-    template <typename T>
-    class holder : public placeholder {
-    public:
-        holder(const T& value) : held(value) { cout << "holder ctor" << endl; }
-
-        // 看起来是一个深拷贝，但最后是父类指针，指向子类对象
-        virtual placeholder* clone() const
-        {
-            cout << "holder clone" << endl;
-            return new holder(held);
-        }
-
-        T held;  // 真正的资料保存在这里
-    };
-
-public:
-    myAny() : content(NULL) { cout << "myAny ctor" << endl; }
-
-    // template ctor，参数可以为任意的type，真正资料保存在content里
-    template <typename T>
-    myAny(const T& value) : content(new holder<T>(value))
-    {
-        cout << "myAny template ctor" << endl;
-    }
-
-    // copy ctor，0就代表了NULL指针
-    myAny(const myAny& other) : content(other.content ? other.content->clone() : 0)
-    {
-        cout << "myAny copy ctor" << endl;
-    }
-
-    ~myAny()
-    {
-        cout << "myAny dtor" << endl;
-        if (content != NULL) delete content;
-    }
-
-private:
-    placeholder* content;
-};
-
-typedef list<myAny> list_any;
-
-void fill_list(list_any& la)
-{
-    // TODO: 单个的输出就很多，为啥呢？
-    la.push_back(10);
-    // la.push_back(string("I am a string"));
-    // const char* p = "I am char arry";
-    // la.push_back(p);
-}
-
-void test08_any_reimplementation()
-{
-    cout << "\n----------------------------------------------------------\n";
-    cout << "test08_any_reimplementation()..........";
-    cout << "\n----------------------------------------------------------\n";
-
-    list_any la;
-    fill_list(la);
-}
-
-}  // namespace jj08
 
 //----------------------------------------------------
 // Design Pattern: Observer
