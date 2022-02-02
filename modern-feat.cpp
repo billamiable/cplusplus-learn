@@ -892,9 +892,8 @@ void test50_hash()
 // Push_back vs Emplace_back
 //----------------------------------------------------
 namespace yj01 {
-// TODO: emplace_back输入是universal reference，所以再用std::move处理输入即用rvalue
+// TODO: emplace_back输入是universal reference，再调用move处理可变成rvalue
 // push_back有两种重载函数，右值输入内部直接调用到emplace_back函数
-// emplace_back输入数据后面可以用，只是内部会操作
 class President {
 public:
     President(string p_name, int p_year) : name(p_name), year(p_year) { cout << "ctor is called" << endl; }
@@ -902,12 +901,12 @@ public:
     President(const President& other) : name(other.name), year(other.year) { cout << "copy ctor is called" << endl; }
 
     // 注意：只有在使用noexcept的时候，vector扩展才会调用move ctor
-    // 但是与是否使用std::move无关，move了后面就用不了
+    // 但是与initializer list中针对输入参数是否使用std::move无关
     // 为何要用std::move呢？
-    // 这个的答案很有意思，分成两个层面来回答：
+    // 这个的答案很有意思，分成两个层面来回答（目前的想法）：
     // 1. other在内容上是右值，但是由于它有参数名，所以在编译器的规则下是左值，所以为了让编译器认识需要加上move
-    // 2. 由于数据类型是string，必须要用move才会真正调用move操作以提升效率，不然还是copy
-    President(President&& other) noexcept : name(std::move(other.name)), year(other.year)
+    // 2. 由于数据类型是string，必须要用move才会真正调用move操作以提升效率，不然还是copy（待验证）
+    President(President&& other) noexcept : name(move(other.name)), year(other.year)
     // President(President&& other) noexcept : name(other.name), year(other.year)
     {
         cout << "move ctor is called" << endl;
@@ -929,24 +928,20 @@ void test01_emplace_back()
     cout << "\n----------------------------------------------------------\n";
 
     vector<President> elections;
-    // elections.reserve(10);
+    elections.reserve(10);
     cout << "...push_back left value..." << endl;
-    // President p1("Franklin", 1936);
-    // President p2("Nelson", 1994);
-    // President p3("Billy", 2030);
-    // elections.push_back(p1);
-    // cout << ".." << endl;
-    // elections.push_back(p2);
-    // cout << ".." << endl;
-    // elections.push_back(p3);
+    President p1("Franklin", 1936);  // ctor is called
+    President p2("Nelson", 1994);    // ctor is called
+    President p3("Billy", 2030);     // ctor is called
+    elections.push_back(p1);         // copy ctor is called
+    cout << ".." << endl;
+    elections.push_back(p2);  // copy ctor is called
+    cout << ".." << endl;
+    elections.push_back(p3);  // copy ctor is called
     cout << "...push_back right value..." << endl;
-    elections.push_back(President("Franklin", 1936));
+    elections.push_back(President("Franklin", 1936));  // ctor is called & move ctor is called
     cout << ".." << endl;
-    elections.push_back(President("Nelson", 1994));
-    cout << ".." << endl;
-    elections.push_back(President("Billy", 2030));
-    cout << ".." << endl;
-    elections.push_back(President("Patty", 2050));
+    elections.push_back(President("Nelson", 1994));  // ctor is called & move ctor is called
 
     // print result
     // 注意：一定要用auto&，不然这里会调用拷贝构造函数！
@@ -954,22 +949,18 @@ void test01_emplace_back()
 
     vector<President> elections1;
     cout << "...emplace_back left value..." << endl;
-    // President p1("Franklin", 1936);
-    // elections1.emplace_back(p1);
-    // p1.print();
+    elections1.reserve(10);
+    President q1("Franklin", 1936);  // ctor is called
+    elections1.emplace_back(q1);     // copy ctor is called
+    q1.print();
 
     cout << "...emplace_back right value..." << endl;
-    // elections1.emplace_back(President("Nelson", 1994));
-    // 只有用下面这种方法，才可以免去move ctor，不然上面的还是和原来的一样
-    // 这个还挺神奇的，属于是高阶功能了，自动调用构造函数，这样才会使用container里事先有的内存
-    // TODO: 结果是每个都少了一次move ctor，好像还是有点提升的，具体以后再看看
-    elections1.emplace_back("Franklin", 1936);
+    elections1.emplace_back(President("Nelson", 1994));  // ctor is called & move ctor is called
+    // TODO: 只有按照下面的形式输入参数，可以让每次emplace back都少了一次move ctor，原因是什么？
+    // 自动调用构造函数，且直接使用container里事先分配好的内存，而不是重新分配内存？
+    elections1.emplace_back("Franklin", 1936);  // ctor is called
     cout << ".." << endl;
-    elections1.emplace_back("Nelson", 1994);
-    cout << ".." << endl;
-    elections1.emplace_back("Billy", 2030);
-    cout << ".." << endl;
-    elections1.emplace_back("Patty", 2050);
+    elections1.emplace_back("Nelson", 1994);  // ctor is called
 
     for (auto& p : elections1) p.print();
 }
