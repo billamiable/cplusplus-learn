@@ -971,6 +971,8 @@ void test01_emplace_back()
 // Move Constructor
 //----------------------------------------------------
 namespace yj02 {
+// 注意：这部分代码参考了Hou Jie老师的MyString部分的代码
+// 旨在确定move ctor具体实现中对哪些类型的数据需要加move，哪些不需要
 class SomeDataStructure {
 public:
     SomeDataStructure() { cout << " Base::Base()" << endl; }
@@ -982,7 +984,7 @@ private:
     char* _data;
     size_t _len;
     string _str;
-    // 这个其实相当于composition by reference
+    // composition by reference
     shared_ptr<SomeDataStructure> _ptr;
 
     void _init_data(const char* s)
@@ -1011,12 +1013,11 @@ public:
     }
 
     // move ctor, with "noexcept"
-    // 问题：加不加move都没有区别？
-    // 这里必须加上move才是move ctor，不然你想不就是copy ctor了
-    // 问题：string是怎么实现move的？为何不需要像char*那样的指针需要赋值为NULL？
-    // 实现的方法就是上面的MyString，所以调用了move后自动就会完成指针的赋值了，用户是不用管的
+    // 问题：string是怎么实现move的？为何不需要像char*那样将指针赋值为NULL？
+    // 实现的方法参考jj301里定义的MyString，内部包含了针对指针的赋值
     // MyObject(MyObject&& obj) noexcept : _data(move(obj._data)), _len(move(obj._len)), _str(move(obj._str))
     // 给一个cpp reference上的高级写法，exchange是给obj._len赋值为0，然后return obj._len的old value给_len
+    // TODO: 结论是数据类型中包含指针的（例如string, smart pointer）就需要用move，而其他的都直接用exchange？
     MyObject(MyObject&& obj) noexcept
         : _data(obj._data), _len(exchange(obj._len, 0)), _str(move(obj._str)), _ptr(move(obj._ptr))
     {
@@ -1024,6 +1025,7 @@ public:
         cout << "obj._str is " << obj._str << ", _str is " << _str << endl;
         cout << "obj._ptr is " << obj._ptr << ", _ptr is " << _ptr << endl;
         // 由于用了exchange，所以这里不用再赋值了
+        // TODO: 假设没用exchange，不对obj._len赋值也不会有问题？
         // obj._len = 0;
         obj._data = NULL;  // 避免 delete (in dtor)
     }
@@ -1116,9 +1118,9 @@ void test02_move_constructor()
 //----------------------------------------------------
 // Universal Reference
 //----------------------------------------------------
+namespace yj03 {
 // 注：此段代码整理自Hou Jie老师的讲义
 // 整理了支持copy+move，只支持copy和只支持move三种情况
-namespace yj03 {
 namespace case1 {
 class CopyMove {
 public:
