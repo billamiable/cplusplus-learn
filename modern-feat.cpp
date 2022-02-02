@@ -875,15 +875,15 @@ void test50_hash()
     cout << "\n----------------------------------------------------------\n";
 
     void* pi = (void*)(new int(100));
-    cout << hash<void*>()(pi) << endl;
     // 第一个()是创建对象，第二个()是输入函数参数
+    cout << hash<void*>()(pi) << endl;
     cout << hash<int>()(123) << endl;    // 123
     cout << hash<long>()(123L) << endl;  // 123
     cout << hash<string>()(string("ssss")) << endl;
     cout << hash<const char*>()("sss") << endl;
     cout << hash<char>()('s') << endl;       // ASIC码, 115
-    cout << hash<float>()(3.1415) << endl;   // 1078529622，没有定义不知道怎么算得
-    cout << hash<double>()(3.1415) << endl;  // 4614256447914709615，没有定义不知道怎么算得
+    cout << hash<float>()(3.1415) << endl;   // 没有定义不知道怎么算得
+    cout << hash<double>()(3.1415) << endl;  // 没有定义不知道怎么算得
 }
 
 }  // namespace jj50
