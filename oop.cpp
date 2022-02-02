@@ -1,3 +1,8 @@
+// author: Jie Hou & Yujie Wang
+// 注意：以下内容主要整理自Hou Jie老师的讲义，后续会陆续补充
+//      此外，还有一份oop相关的参考代码，在本repo中为oop-reference.cpp
+//      下面的内容添加了一些注释以帮助理解，并新增了一些测试用例（以yj和dp的namespace区分）
+
 #include <iostream>
 #include <vector>
 // 注意下面两个没关系，string是针对字符串，cstring/string.h是针对字符数组
@@ -118,7 +123,7 @@ public:
     public:
         holder(const T& value) : held(value) { cout << "holder ctor" << endl; }
 
-        // 看起来是一个深拷贝，但最后是父类指针，指向子类对象
+        // TODO: 深拷贝？父类指针指向子类对象
         virtual placeholder* clone() const
         {
             cout << "holder clone" << endl;
@@ -131,14 +136,14 @@ public:
 public:
     myAny() : content(NULL) { cout << "myAny ctor" << endl; }
 
-    // template ctor，参数可以为任意的type，真正资料保存在content里
+    // template ctor，参数可以为任意的类型，真正资料保存在content里
     template <typename T>
     myAny(const T& value) : content(new holder<T>(value))
     {
         cout << "myAny template ctor" << endl;
     }
 
-    // copy ctor，0就代表了NULL指针
+    // copy ctor，0代表了NULL指针
     myAny(const myAny& other) : content(other.content ? other.content->clone() : 0)
     {
         cout << "myAny copy ctor" << endl;
@@ -158,11 +163,18 @@ typedef list<myAny> list_any;
 
 void fill_list(list_any& la)
 {
-    // TODO: 单个的输出就很多，为啥呢？
+    // TODO: 每次push element所调用函数的顺序和次数都是一样的
+    cout << "\n..push first element.." << endl;
     la.push_back(10);
-    // la.push_back(string("I am a string"));
-    // const char* p = "I am char arry";
-    // la.push_back(p);
+
+    cout << "\n..push second element.." << endl;
+    la.push_back(string("I am a string"));
+
+    cout << "\n..push third element.." << endl;
+    const char* p = "I am char arry";
+    la.push_back(p);
+
+    cout << "\n..end of pushing.." << endl;
 }
 
 void test08_any_reimplementation()
@@ -357,7 +369,6 @@ void test02_draw_not_using_polymorphism()
 }
 
 }  // namespace yj02
-
 
 //----------------------------------------------------
 // Design Pattern: Observer
