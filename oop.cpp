@@ -281,6 +281,8 @@ void test01_draw_using_polymorphism()
 // Draw not using Polymorphism
 //----------------------------------------------------
 namespace yj02 {
+// 这个例子与上面的draw using polymorphism结合起来看
+// 由于不使用多态的功能，因此在draw时需要使用any新特性
 class Shape {
 public:
     void draw() { cout << "Shape" << endl; }
@@ -324,6 +326,7 @@ private:
 
 void drawAll(const vector<any>& v)
 {
+    // 不使用多态增加了用户端的编程复杂度
     for (auto& i : v) {
         if (i.type() == typeid(Rect))
             any_cast<Rect>(i).draw();
