@@ -376,23 +376,23 @@ void test02_draw_not_using_polymorphism()
 // Design Pattern: Observer
 //----------------------------------------------------
 namespace dp02 {
-// 这里感觉啥也没有，只有一个update的纯虚函数，实现都在子类
+// 这个类里几乎没东西，只有一个update的纯虚函数，实现都在子类中
 class Observer {
 public:
     // 一般来说，虚析构函数是用于继承体系里，指向子类的父类指针在被delete时
     // 如果父类没有虚析构函数，就只会调用父类的析构函数，而不会调用子类的析构函数
-    // 从而如果子类用了指针数据，就会造成内存泄露
+    // 从而在子类用了指针数据的情况下，就容易造成内存泄露
     // 因此，常用的做法就是在父类里都定义一个虚析构函数，从而释放子类的内存
     // 这里其实是可以不用加的，因为没有指针数据
     virtual ~Observer() { cout << "observer dctor" << endl; };
     virtual void update(int value) = 0;
 };
 
-// 这个的顺序比较重要！不然就会找不到，把父类都放在最前面
-// 这个在实际使用时还可以派生一些子类来使用
+// 这个的顺序比较重要，需要把父类都放在最前面！不然编译报错显示找不到
+// Subject类在实际使用时还可以派生一些子类来使用
 class Subject {
 public:
-    // 这里讲道理都是要加虚析构函数，因为里面有指针对象
+    // TODO: 这里讲道理都是要加虚析构函数的，因为里面有指针对象
     virtual ~Subject() { cout << "subject dctor" << endl; };
     void attach(Observer* obs)
     {
@@ -407,10 +407,9 @@ public:
     void set_value(int value)
     {
         cout << "set value" << endl;
-        // 这里set value相当于改的是全局的
+        // 这里的set value会修改全局的结果
         // 因为value_会在notify函数中用于update observer里的数据
         value_ = value;
-        // 下面这个函数其实是可以直接写在这里的
         notify();
     }
     void notify()
