@@ -1116,6 +1116,8 @@ void test02_move_constructor()
 //----------------------------------------------------
 // Universal Reference
 //----------------------------------------------------
+// 注：此段代码整理自Hou Jie老师的讲义
+// 整理了支持copy+move，只支持copy和只支持move三种情况
 namespace yj03 {
 namespace case1 {
 class CopyMove {
@@ -1123,13 +1125,14 @@ public:
     CopyMove() { cout << "CopyMove ctor" << endl; }
     ~CopyMove() { cout << "CopyMove dtor" << endl; }
 
-    // 这个写法好奇怪
+    // TODO: copy ctor的写法与普通的不一样？
     CopyMove(CopyMove const&) { cout << "CopyMove copy ctor" << endl; }
     CopyMove& operator=(CopyMove const&)
     {
         cout << "CopyMove copy assignment" << endl;
         return *this;
     }
+    // TODO: 为何不用加noexcept?
     CopyMove(CopyMove&&) { cout << "CopyMove move ctor" << endl; }
     CopyMove& operator=(CopyMove&&)
     {
@@ -1157,15 +1160,15 @@ public:
     CopyOnly() { cout << "CopyOnly ctor" << endl; };
     ~CopyOnly() { cout << "CopyOnly dtor" << endl; };
 
-    // 这个写法好奇怪
     CopyOnly(CopyOnly const&) { cout << "CopyOnly copy ctor" << endl; };
     CopyOnly& operator=(CopyOnly const&)
     {
         cout << "CopyOnly copy assignment" << endl;
         return *this;
     }
-    CopyOnly(CopyOnly&&) = delete;             // 这里的delete很妙！
-    CopyOnly& operator=(CopyOnly&&) = delete;  // 这里的delete很妙！
+    // 通过使用delete禁用move相关的函数
+    CopyOnly(CopyOnly&&) = delete;
+    CopyOnly& operator=(CopyOnly&&) = delete;
 };
 
 // 调用函数列表
@@ -1188,9 +1191,9 @@ public:
     MoveOnly() { cout << "MoveOnly ctor" << endl; };
     ~MoveOnly() { cout << "MoveOnly dtor" << endl; };
 
-    // 这个写法好奇怪
-    MoveOnly(MoveOnly const&) = delete;             // 这里的delete很妙！
-    MoveOnly& operator=(MoveOnly const&) = delete;  // 这里的delete很妙！
+    // 通过使用delete禁用copy相关的函数
+    MoveOnly(MoveOnly const&) = delete;
+    MoveOnly& operator=(MoveOnly const&) = delete;
     MoveOnly(MoveOnly&&) { cout << "MoveOnly move ctor" << endl; };
     MoveOnly& operator=(MoveOnly&&)
     {
@@ -1244,7 +1247,7 @@ void test03_universal_reference()
         //! f5(myCopyMove);
         // 正常使用时内部不涉及到数据拷贝和类型转换
         f4(move(myCopyMove));  // f4
-        // TODO： 用不用const没什么区别？那一般怎么要求？
+        // TODO： 用不用const对结果没影响？一般的规范怎么要求？
         f5(move(myCopyMove));  // f5
 
         // 这里同理，只是会构造一个临时对象
@@ -1272,16 +1275,17 @@ void test03_universal_reference()
         f2(myCopyOnly);       // f2
         f3(myCopyOnly);       // f3
 
-        // 删除move ctor后就左值value接受不了右值了
+        // 删除move ctor后左值value就接受不了右值了
         // 编译报错：use of deleted function (move ctor)
         //! f1(move(myCopyOnly));
         // 左值reference本来就不能接受右值，跟上面一样
         // 编译报错： cannot bind non-const lvalue reference to an rvalue
         //! f2(move(myCopyOnly));
-        // 这里还是可以正常运行，说明其实上面本质是有一个隐式类型转换！！！
+        // 左值const reference仍然可以接受右值的输入
+        // TODO: 说明里面包含一个隐式类型转换！！！
         f3(move(myCopyOnly));  // f3
 
-        // 下面这一趴根上面都一样
+        // 下面这一趴跟上面都一样
         //! f4(myCopyOnly);
         //! f5(myCopyOnly);
         f4(move(myCopyOnly));  // f4
@@ -1311,8 +1315,7 @@ void test03_universal_reference()
         f2(myMoveOnly);  // f2
         f3(myMoveOnly);  // f3
 
-        // 这里相当于用给定的move ctor改了下类型
-        // TODO: 为何不用加noexcept?
+        // 这里相当于用给定的move ctor修改了数据类型
         f1(move(myMoveOnly));  // move ctor + f1 + dtor
         // 编译报错：cannot bind non-const lvalue reference to an rvalue
         //! f2(move(myMoveOnly));
