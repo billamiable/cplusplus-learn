@@ -195,8 +195,7 @@ void test08_any_reimplementation()
 namespace yj01 {
 class Shape {
 public:
-    virtual void draw() = 0;  // pure virtual
-    // sizeof可以针对
+    virtual void draw() = 0;                        // pure virtual
     virtual int Sizeof() { return sizeof(Shape); }  // 可以改成sizeof(*this)
 };
 
@@ -233,11 +232,11 @@ public:
 void drawAll(const vector<Shape*>& v)
 {
     for (int i = 0; i < v.size(); ++i) {
-        // 注意：sizeof看的是static type，即最初定义的
-        // 而自己写的虚函数Sizeof是看dynamic type，即upcast后的类型
-        // 这个还挺牛逼的，感觉很容易弄错！
-        // 看起来dynamic type和static type主要就是用来实现多态的
-        // TODO: 与dynamic_cast, static_cast有关？后面自己实现下
+        // 注意：c++官方提供的sizeof函数检查的是数据的static type，即最初定义的类型
+        // 而此处自己写的虚函数Sizeof函数检查的是数据的dynamic type，即upcast后的类型
+        // 这个很容易弄错！
+        // TODO: dynamic type, static type与多态的关系？
+        // TODO: dynamic type, static type与dynamic_cast, static_cast的关系？
         cout << sizeof(*v[i]) << " ";   // 这个就是Shape类，静态绑定，都是8
         cout << v[i]->Sizeof() << " ";  // 这个就是各个派生类的实际size，动态绑定
         v[i]->draw();                   // 打印派生类的draw内容
@@ -261,7 +260,7 @@ void test01_draw_using_polymorphism()
     pr->draw();  // Rect
     delete pr;
 
-    // 大小为何是8，有2个虚指针？
+    // TODO: 大小为何是8，有2个虚指针？
     cout << sizeof(Shape) << endl;    // 8
     cout << sizeof(Rect) << endl;     // 16，多了两个数据
     cout << sizeof(Square) << endl;   // 16，同上
