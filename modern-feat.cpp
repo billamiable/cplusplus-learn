@@ -1,6 +1,7 @@
 // author: Jie Hou & Yujie Wang
-// Rearrage the code according to the course order
-// Incorporate my own implementation and thoughts
+// 注意：以下内容整理自Hou Jie老师的代码示例，在本repo中为modern-feat-reference.cpp
+//      本文件只包含了以上文件的部分代码，后面会陆续补充
+//      在此基础上，添加了一些注释以帮助理解，并新增了一些测试用例（以yj的namespace区分）
 
 #include <iostream>
 #include <vector>
@@ -482,15 +483,17 @@ void test15_variadic_template()
 // Move Semantics with Noexcept
 //----------------------------------------------------
 namespace jj301 {
-// 这里的核心逻辑是针对move的来源端，其实他已经是废物了，后面不会用到了
+// 注意：以下内容基于Hou Jie老师的代码示例新增了一些测试
+
+// 理解move的方法：针对move的来源端，在move后就变成了“废物”，后面不会用到了
 // 举个例子，对于string来说，是一个指针指向一块内存
-// 当执行move时，相当于老的指针没用了，但是分配的内存没必要换了
+// 当执行move后，相当于老的指针没用了，但是分配的内存没必要换了
 // 因此直接把新的指针指向这块内存，然后删除老的指针
 
 // http://www.ibm.com/developerworks/cn/aix/library/1307_lisl_c11/
 // http://stackoverflow.com/questions/8001823/how-to-enforce-move-semantics-when-a-vector-grows
 
-// 可以理解成给别人打保票，所以别人才会用
+// 对于nonexcept，可以理解成给编译器打保票不会有exception，这样编译器才愿意使用
 // You need to inform C++ (specifically std::vector) that your move constructor and destructor does not throw.
 // Then the move constructor will be called when the vector grows.
 // If the constructor is not noexcept, std::vector can't use it,
@@ -531,30 +534,19 @@ public:
     // move ctor, with "noexcept"
     // 注意参数类型，是两个&，代表右值引用符号
     // 加了exception有什么好处？只有加了后才会调用move ctor，否则默认调用copy ctor！
-    // 这里两个指针指向同一个地址，后面一定要把其中一个打断
-    // 注意：这里对于str._data进行std::move是没有意义的，因为move只是申明这个object后面
-    // 可能会被偷，在实际赋值时直接让指针改变指向实现，因此对于指针进行move是没有意义的！
-
-    // 问题：1. 用不用move有区别吗？ 有！对于不同的数据类型区分对待！
-    // 2. 如果有，前面move了后面还可以用吗？还是只是值没了？ 数据类型合理情况下就是没了！
     // 这里的str是右值，但是由于它有名字，所以根据编译器的规则是看作为左值，后面如果转调用是调用左值的函数
     // 假设这里要做正确的转调用，那么必须要用std::forward，而且得做成template的方式！
-    // 因此，其实这里的str._data, _len, _print都最好加上move
-    // MyString(MyString&& str) noexcept : _data(move(str._data)), _len(move(str._len)), _print(move(str._print))
     MyString(MyString&& str) noexcept : _data(str._data), _len(str._len), _print(str._print)
     {
         if (_print)
             cout << "Move Constructor is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
-        // 这里的数据复制在上面一行里了，下面只是防止两个指针指向同一个位置，需要删除
-        // TODO: 为何还要改成default value？感觉这个没影响，可能就是习惯比较好
+        // TODO: 为何还要改成default value？对结果没影响？可能只是规范？
         str._len = 0;
         str._print = false;
-        // 这一行特别重要，首先很好理解，对于move语义就是应该把老的指针删去
-        // 如果不这么做，其实就是典型的多个指针指向同一块内存，从而引发多次释放的问题（double free）
-        // 在这里具体的体现是，输入的str是一个临时对象，在这个函数调用结束后会做析构，那就自动把数据删掉了！
-        // 不然会报pointer being freed was not allocated，释放的c++指针没有分配（在程序最后释放另一个指针时报错）
-        // 或者直接报错double free，这样就很明显了
-        // 本质：这个可以看成人为的move操作
+        // 下面这行特别重要，如果不这么做，会导致多个指针指向同一块内存
+        // 在这里具体的体现是，输入的str是一个临时对象，在这个函数调用结束后会做析构，此时就会自动把数据删掉了！
+        // 会报错：pointer being freed was not allocated，释放的c++指针没有分配（在程序最后释放另一个指针时报错）
+        // 或者直接报错：double free
         str._data = NULL;  // 避免 delete (in dtor)
     }
 
@@ -564,7 +556,7 @@ public:
         if (str._print)
             cout << "Copy Assignment is called! source: " << str._data << " [" << (void*)(str._data) << ']' << endl;
         // 判断是否是给自己拷贝赋值
-        // this定义，谁调用它，this就指向谁，因此这里this指向类的对象（被赋值的）
+        // this定义：谁调用它，this就指向谁，因此这里this指向类的对象（被赋值的）
         // 因此&str同样是取类的对象的地址，可以用来判断是不是自己拷贝给自己
         // 必须有自己检测，不然可能把指向的东西杀掉
         if (this != &str) {
@@ -611,7 +603,7 @@ public:
             cout << " [" << (void*)(_data) << ']' << endl;
         }
 
-        // 只要当指针不是NULL的时候才delete，做一个doublecheck
+        // 只有当指针不是NULL的时候才delete，做一个doublecheck
         // 与上面的设计配套，保证没问题
         if (_data) {
             delete _data;
@@ -623,39 +615,44 @@ public:
     void print() { cout << "data is " << _data << endl; }
 };
 
+// 这个函数是原版代码示例里的
 void test301_move_semantics_with_noexcept()
 {
     cout << "\n----------------------------------------------------------\n";
-    cout << "test301_move_semantics_with_noexcept_and_swap().......";
+    cout << "test301_move_semantics_with_noexcept().......";
     cout << "\n----------------------------------------------------------\n";
 
     // 做了一个MyString的容器
     vector<MyString> vec;
-    // VIP: 加上reserve后就不怎么会扩容，所以reserve很重要！如果能知道大概大小的话
-    // 扩容是每次乘以2，这个还是比较有效的，在数据少的时候拷贝也还好
+    // VIP: 加上reserve后会预先分配好容器的容量，从而减少扩容的次数
+    // 因此，如果在使用时能知道容器要放的东西总共的数量的话，reserve可以显著提升效率！
+    // 容器扩容方法：每次不够时容量都乘以2，这个整体上还是比较合理的，因此在数据少时拷贝的效率也还好
     // vec.reserve(2);
     // without reserve(N);
     // 如果没有reserve，那么capcity初值为0
     cout << "vector capacity is " << vec.capacity() << endl;
 
     // Move Constructor is called! source: jjhou
-    // Destructor is called! [0]
     vec.push_back(MyString("jjhou"));
     cout << "after push 1 element, vector capacity is " << vec.capacity() << endl;
 
     // 这里会出现两次，是因为vector自动进行扩展，包含一次内部拷贝
     // Move Constructor is called! source: sabrina
     // Move Constructor is called! source: jjhou
-    // Destructor is called! [0]
-    // Destructor is called! [0]
-    // vec.push_back(MyString("sabrina"));
-    // cout << "after push 2 elements, vector capacity is " << vec.capacity() << endl;
+    vec.push_back(MyString("sabrina"));
+    cout << "after push 2 elements, vector capacity is " << vec.capacity() << endl;
 
-    // vec.push_back(MyString("stacy"));
-    // cout << "after push 3 elements, vector capacity is " << vec.capacity() << endl;
+    // TODO: 这里会再次进行vector扩展，注意后面的顺序，先jjhou再sabrina
+    // Move Constructor is called! source: stacy
+    // Move Constructor is called! source: jjhou
+    // Move Constructor is called! source: sabrina
+    vec.push_back(MyString("stacy"));
+    cout << "after push 3 elements, vector capacity is " << vec.capacity() << endl;
 
-    // vec.push_back(MyString("yujie"));
-    // cout << "after push 4 elements, vector capacity is " << vec.capacity() << endl;
+    // 这里不需要再进行vector扩展，容量还够
+    // Move Constructor is called! source: baby
+    vec.push_back(MyString("baby"));
+    cout << "after push 4 elements, vector capacity is " << vec.capacity() << endl;
 
     for (auto& v : vec) {
         v.print();
@@ -670,17 +667,19 @@ void test301_move_semantics_with_noexcept()
     // exit 前會 delete all existing objects.
 }
 
+// 新增的测试：验证move ctor vs. copy ctor在不同容器上的效率
+// 以下测试整理自于Hou Jie老师的课件
 enum RV { Rvalue, Lvalue };
 
 template <typename Container>
 void test_moveable(Container& cntr, long times, RV option)
 {
-    // 下面三个是一样的
-    // get_type_using_decltype测试了，但是麻烦的是必须先有一个元素来获得
+    // 下面三种方法获得的结果是一样的，在下面的get_type_using_decltype函数中测试了
+    // decltype的缺点：必须先有一个元素来获得
     typedef typename iterator_traits<typename Container::iterator>::value_type ElemType;
     typedef typename Container::value_type ElemType2;
     // 可以用C++ 11的decltype功能，获得container的数据type
-    // 这个就相对编程友好点，不需要事先知道函数定义，不过看起来不是很elegant？
+    // 这样就不需要事先知道函数定义，不过看起来不是很elegant？
     auto foo = *(cntr.begin());
     using ElemType3 = decltype(foo);
 
@@ -703,48 +702,6 @@ void test_moveable(Container& cntr, long times, RV option)
     cout << "milli-seconds: " << (clock() - timeStart) << endl;
 }
 
-// 验证是否可以通过decltype来获得元素类型
-template <typename Container>
-void get_type_using_decltype(Container& cntr)
-{
-    // 获得Iterator，并*得到元素
-    // 这里会自动调用copy ctor
-    // 但是如果vector事先定了capacity，这里却会调用move ctor？
-    auto foo = *(cntr.begin());
-    cout << "type of container element is " << typeid(foo).name() << endl;
-
-    // 注意：这里只是声明，没有定义！
-    decltype(foo) aa;
-    cout << "newly createdly element type is " << typeid(aa).name() << endl;
-
-    typedef typename iterator_traits<typename Container::iterator>::value_type ElemType;
-    typedef typename Container::value_type ElemType2;
-    using new_type = decltype(foo);
-
-    ElemType bb;
-    cout << "ElemType type is " << typeid(bb).name() << endl;
-    ElemType2 bb1;
-    cout << "ElemType2 type is " << typeid(bb1).name() << endl;
-
-    new_type cc;
-    cout << "Using decltype type is " << typeid(cc).name() << endl;
-}
-
-void test301_moveable_decltype()
-{
-    cout << "\n----------------------------------------------------------\n";
-    cout << "test301_moveable_decltype()..........";
-    cout << "\n----------------------------------------------------------\n";
-
-    MyString str("Hello world!", true);
-    // 这里的原因同样必须给一个初始化对象，不然会报segment fault
-    // 与test301_move_with_nonmove里的原因一致
-    std::vector<MyString> vec_MyS(10, str);
-    vec_MyS.push_back(str);
-
-    get_type_using_decltype(vec_MyS);
-}
-
 #define TIMES 100000L
 void test301_move_with_nonmove()
 {
@@ -762,9 +719,9 @@ void test301_move_with_nonmove()
 
         cout << "\nvector test..." << endl;
         // 注意：这里必须给一个初始化对象，不然会调用默认ctor
-        // 后面push_back/insert时调用move/copy ctor相当于给_init_data赋值NULL
-        // 会导致segment fault
-        // str.test();
+        // 之后进行push_back/insert时调用move/copy ctor
+        // 相当于给_init_data赋值NULL，从而导致segment fault
+        // str.test(); // 可以通过这个小测试来验证以上想法
         std::vector<MyString> vec_MyS(container_size, str);
         test_moveable(vec_MyS, TIMES, Rvalue);
         cout << "container size = " << vec_MyS.size() << endl;
@@ -800,6 +757,49 @@ void test301_move_with_nonmove()
         test_moveable(deq_MyS, TIMES, Lvalue);
         cout << "container size = " << deq_MyS.size() << endl;
     }
+    // TODO: 给一个结果分析
+}
+
+// 新增的测试：验证是否可以通过decltype来获得元素类型
+template <typename Container>
+void get_type_using_decltype(Container& cntr)
+{
+    // 先获得Iterator，再调用*得到容器的元素
+    // 这里会自动调用copy ctor
+    // TODO: 但如果vector事先定了capacity，这里却会调用move ctor？
+    auto foo = *(cntr.begin());
+    cout << "type of container element is " << typeid(foo).name() << endl;
+
+    // 注意：这里只是声明，没有定义！
+    decltype(foo) aa;
+    cout << "newly createdly element type is " << typeid(aa).name() << endl;
+
+    typedef typename iterator_traits<typename Container::iterator>::value_type ElemType;
+    typedef typename Container::value_type ElemType2;
+    using new_type = decltype(foo);
+
+    ElemType bb;
+    cout << "ElemType type is " << typeid(bb).name() << endl;
+    ElemType2 bb1;
+    cout << "ElemType2 type is " << typeid(bb1).name() << endl;
+
+    new_type cc;
+    cout << "Using decltype type is " << typeid(cc).name() << endl;
+}
+
+void test301_moveable_decltype()
+{
+    cout << "\n----------------------------------------------------------\n";
+    cout << "test301_moveable_decltype()..........";
+    cout << "\n----------------------------------------------------------\n";
+
+    MyString str("Hello world!", true);
+    // 这里的原因同样必须给一个初始化对象，不然会报segment fault
+    // 与test301_move_with_nonmove里的原因一致
+    std::vector<MyString> vec_MyS(10, str);
+    vec_MyS.push_back(str);
+
+    get_type_using_decltype(vec_MyS);
 }
 
 }  // namespace jj301
