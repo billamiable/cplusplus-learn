@@ -477,6 +477,7 @@ void test02_observer()
 // Design Pattern: Composite
 //----------------------------------------------------
 namespace dp03 {
+// 以下内容整理自于Hou Jie老师的讲义
 class Component  // lowest common
 {
 public:
@@ -524,7 +525,7 @@ void test03_composite()
     }
 
     // 这里相当于把第2-4个container的内容拷贝一份在第1个container下面
-    // 体现出一种composite特性，即leaf下面可以再有一个
+    // 体现出一种composite特性
     for (int i = 1; i < 4; ++i) {
         containers[0].add(&(containers[i]));
     }
