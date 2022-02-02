@@ -17,14 +17,14 @@ namespace jj07 {
 // Abstract base class declared by framework
 class Document {
 public:
-    // 这里strcpy相当于保存了字符串名称
+    // 通过strcpy把输入的字符串保存了下来
     Document(const char* fn) { strcpy(name, fn); }
     virtual void Open() = 0;
     virtual void Close() = 0;
     char* GetName() { return name; }
 
 private:
-    // 这里存的是"foo"和"bar"这两个name
+    // 在后面的例子中，这里存了"foo"和"bar"这两个name
     char name[20];
 };
 
@@ -89,9 +89,9 @@ void test07_factory_method()
     MyApp myApp;
 
     // 由于子类继承了所有父类函数的调用权，包括NewDocument，因此可以直接调用
-    // 然后由于父类无法直接获得子类创建的class名称（在这里是MyDoc），其实这里对象都存了？
-    // 要想获得则需要通过虚函数、指针、向上转型三要素
-    // 即定义虚函数CreateDocument，用Document*指针，将MyDoc的子类指针向上转型成了Document*
+    // 然后由于父类无法直接获得子类创建的class名称（在这里是MyDoc）
+    // 要想获得则需要通过虚函数、指针、向上转型的三要素
+    // 即定义虚函数CreateDocument，用Document*指针，将MyDoc的子类指针向上转型成了Document*类型
     // 从而最后在父类中将子类创建的MyDoc对象存在_docs数组里
     myApp.NewDocument("foo");
     myApp.NewDocument("bar");
@@ -529,13 +529,13 @@ int main(int argc, char** argv)
 {
     cout << "c++ version " << __cplusplus << endl;
 
-    yj01::test01_draw_using_polymorphism();
-
-    yj02::test02_draw_not_using_polymorphism();
-
     jj07::test07_factory_method();
 
     jj08::test08_any_reimplementation();
+
+    yj01::test01_draw_using_polymorphism();
+
+    yj02::test02_draw_not_using_polymorphism();
 
     dp02::test02_observer();
 
