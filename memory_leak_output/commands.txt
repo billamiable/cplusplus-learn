@@ -1,0 +1,14 @@
+Ref: https://unix.stackexchange.com/questions/36450/how-can-i-find-a-memory-leak-of-a-running-process
+
+./test_memory_leak
+
+ps -aux
+cat /proc/PID/smaps > before.txt
+cat /proc/PID/smaps > after.txt
+diff -u before.txt after.txt
+
+sudo gdb --pid PID
+dump memory ./memory.dump 0xAdd1 0xAdd2
+
+strings memory.dump
+hexdump -C memory.dump
