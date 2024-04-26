@@ -16,6 +16,7 @@
 #include <ctime>
 #include <algorithm>
 #include <initializer_list>
+#include <chrono>
 using namespace std;
 
 //----------------------------------------------------
@@ -685,7 +686,8 @@ void test_moveable(Container& cntr, long times, RV option)
 
     char buf[10];
 
-    clock_t timeStart = clock();
+    // clock_t timeStart = clock();
+    auto startTime = std::chrono::high_resolution_clock::now();
     for (long i = 0; i < times; ++i) {
         // 拼接随机数变成string，赋值到buf里，每个元素一个数字，可能不满
         snprintf(buf, 10, "%d", rand());  // 随机数
@@ -699,7 +701,12 @@ void test_moveable(Container& cntr, long times, RV option)
             cntr.insert(itr, elem);
         }
     }
-    cout << "milli-seconds: " << (clock() - timeStart) << endl;
+    // cout << "milli-seconds: " << (clock() - timeStart) << endl;
+    auto endTime = std::chrono::high_resolution_clock::now();
+
+    // 计算代码段运行的时间
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+    std::cout << "代码段运行了 " << duration.count() << " ms" << std::endl;
 }
 
 #define TIMES 100000L
@@ -758,6 +765,38 @@ void test301_move_with_nonmove()
         cout << "container size = " << deq_MyS.size() << endl;
     }
     // TODO: 给一个结果分析
+    // 看起来move copy还更慢。。
+    // -------------------------------------------
+    // Container-based right value test
+    // -------------------------------------------
+
+    // vector test...
+    // 代码段运行了 24 ms
+    // container size = 150000
+
+    // list test...
+    // 代码段运行了 15 ms
+    // container size = 150000
+
+    // deque test...
+    // 代码段运行了 17 ms
+    // container size = 150000
+
+    // -------------------------------------------
+    // Container-based left value test
+    // -------------------------------------------
+
+    // vector test...
+    // 代码段运行了 14 ms
+    // container size = 150000
+
+    // list test...
+    // 代码段运行了 13 ms
+    // container size = 150000
+
+    // deque test...
+    // 代码段运行了 17 ms
+    // container size = 150000
 }
 
 // 新增的测试：验证是否可以通过decltype来获得元素类型
@@ -1348,27 +1387,27 @@ int main(int argc, char** argv)
 {
     cout << "c++ version " << __cplusplus << endl;
 
-    jj03::test03_initializer_list();
+    // jj03::test03_initializer_list();
 
-    jj06::test06_lambda();
+    // jj06::test06_lambda();
 
-    jj12::test12_Rvalue_Move();
+    // jj12::test12_Rvalue_Move();
 
-    jj15::test15_variadic_template();
+    // jj15::test15_variadic_template();
 
-    jj301::test301_move_semantics_with_noexcept();
+    // jj301::test301_move_semantics_with_noexcept();
 
     jj301::test301_move_with_nonmove();
 
-    jj301::test301_moveable_decltype();  // 一个小测试学习decltype的，内含在test301_move_with_nonmove里了
+    // jj301::test301_moveable_decltype();  // 一个小测试学习decltype的，内含在test301_move_with_nonmove里了
 
-    jj48::test48_type_alias();
+    // jj48::test48_type_alias();
 
-    jj50::test50_hash();
+    // jj50::test50_hash();
 
-    yj01::test01_emplace_back();
+    // yj01::test01_emplace_back();
 
-    yj02::test02_move_constructor();
+    // yj02::test02_move_constructor();
 
-    yj03::test03_universal_reference();
+    // yj03::test03_universal_reference();
 }
